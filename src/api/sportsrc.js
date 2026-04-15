@@ -186,11 +186,26 @@ function getMatchStatus(match) {
   const now = Date.now();
   const matchTime = match.date;
   const thirtyMins = 30 * 60 * 1000;
+  const twoHours = 120 * 60 * 1000;
   
-  // Future match: more than 30 min to start
+  // If match is more than 30 min in the future → pending
   if (matchTime > now + thirtyMins) {
     return 'pending';
   }
+  
+  // If match is within 30 min to start → pending (about to start)
+  if (matchTime > now && matchTime <= now + thirtyMins) {
+    return 'pending';
+  }
+  
+  // If match started less than 2 hours ago → live (still going)
+  if (matchTime <= now && matchTime > now - twoHours) {
+    return 'live';
+  }
+  
+  // Otherwise → finished
+  return 'finished';
+}
   
   // Match starts within 30 min but hasn't started yet → pending (about to start)
   if (matchTime > now && matchTime <= now + thirtyMins) {
