@@ -85,25 +85,26 @@ function formatDateKey(date) {
 /**
  * Extract league name from match data
  * SportSRC doesn't provide league name directly, so we infer from title/ID
- * We also use team names to identify leagues
+ * Priority: 1) league keywords, 2) team names
  */
 function extractLeague(match) {
   const searchText = (match.title + ' ' + match.id).toLowerCase();
   
-  // Try to match known leagues first
+  // FIRST: Check for league keywords (higher priority)
   const leaguePatterns = [
     { pattern: 'liga profesional', name: 'Liga Profesional' },
     { pattern: 'copa argentina', name: 'Copa Argentina' },
     { pattern: 'copa de la liga', name: 'Copa de la Liga' },
     { pattern: 'libertadores', name: 'Copa Libertadores' },
     { pattern: 'sudamericana', name: 'Copa Sudamericana' },
+    { pattern: 'ucl ', name: 'Champions League' },
+    { pattern: 'champions league', name: 'Champions League' },
     { pattern: 'champions', name: 'Champions League' },
     { pattern: 'intercontinental', name: 'Copa Intercontinental' },
-    { pattern: 'ucl ', name: 'Champions League' },
     { pattern: 'europa league', name: 'Europa League' },
     { pattern: 'conference', name: 'Conference League' },
     { pattern: 'mundial de clubes', name: 'Mundial de Clubes' },
-    { pattern: 'premier', name: 'Premier League' },
+    { pattern: 'premier league', name: 'Premier League' },
     { pattern: 'carabao', name: 'Carabao Cup' },
     { pattern: 'fa cup', name: 'FA Cup' },
     { pattern: 'la liga', name: 'La Liga' },
@@ -121,10 +122,17 @@ function extractLeague(match) {
     }
   }
   
-  // Try to deduce league from team names
+  // Skip matches with null teams (like "UCL Multicast")
+  const homeName = match.teams?.home?.name;
+  const awayName = match.teams?.away?.name;
+  if (!homeName && !awayName) {
+    return 'Otros'; // Skip "por confirmar" matches
+  }
+  
+  // SECOND: Try to deduce league from team names
   const teamNamePatterns = {
     'Liga Profesional': [
-      'river', 'boca', 'independiente', 'racing', 'san lorenzo', 'huracán', 'Vélez',
+      'river', 'boca', 'independiente', 'racing', 'san lorenzo', 'huracán', 'vélez',
       'lanús', 'godoy cruz', 'belgrano', 'central córdoba', 'platense',
       'talleres', 'unión', 'huracán', 'boca juniors', 'river plate', 'club atlético',
       'gimnasia', 'estudiantes', 'rosario central', 'newell', 'atético tucumán',
@@ -136,7 +144,8 @@ function extractLeague(match) {
     'Copa Sudamericana': ['sudamericana'],
     'Champions League': [
       'real madrid', 'barcelona', 'bayern', 'manchester city', 'liverpool', 
-      'chelsea', 'arsenal', 'tottenham', 'psg', 'juventus', 'inter', 'milan'
+      'chelsea', 'arsenal', 'tottenham', 'psg', 'juventus', 'inter', 'milan',
+      'sporting', 'monaco', 'dortmund', 'leverkusen', 'atletico'
     ],
     'Premier League': [
       'manchester united', 'manchester city', 'liverpool', 'chelsea', 
@@ -153,7 +162,7 @@ function extractLeague(match) {
     ],
     'Bundesliga': [
       'bayern munich', 'borussia dortmund', 'rb leipzig', 'leverkusen',
-      'frankfurt', 'wolfsburg', 'stuttgart', ' Freiburg'
+      'frankfurt', 'wolfsburg', 'stuttgart'
     ],
   };
   
@@ -260,13 +269,14 @@ export async function getMatches(date) {
       const altEnd = altStart + 24 * 60 * 60 * 1000;
       const altMatches = matches.filter(m => m.date >= altStart && m.date < altEnd);
       if (altMatches.length > 0) {
-        return altMatches.map(normalizeMatch).sort((a, b) => a.date - b.date);
+        return altMatches.map(normalizeMatch).filter(m => m.teams.home.name !== 'por confirmar' && m.teams.away.name !== 'por confirmar').sort((a, b) => a.date - b.date);
       }
     }
   }
   
   return filtered
     .map(normalizeMatch)
+    .filter(m => m.teams.home.name !== 'por confirmar' && m.teams.away.name !== 'por confirmar')
     .sort((a, b) => a.date - b.date);
 }
 
