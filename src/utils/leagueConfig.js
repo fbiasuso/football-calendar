@@ -1,75 +1,45 @@
 // League configuration for Football Calendar
-// Used for filtering and display
+// Using football-data.org API
 
 export const LEAGUE_GROUPS = {
+  champions: {
+    name: 'Champions League',
+    leagues: ['UEFA Champions League'],
+  },
+  libertadores: {
+    name: 'Copa Libertadores',
+    leagues: ['Copa Libertadores', 'Copa Sudamericana'],
+  },
   argentina: {
     name: 'Argentina',
-    leagues: [
-      'Liga Profesional',
-      'Copa Argentina',
-      'Copa de la Liga',
-    ],
-  },
-  internacional: {
-    name: 'Internacional',
-    leagues: [
-      'Copa Libertadores',
-      'Copa Sudamericana',
-      'Champions League',
-      'Copa Intercontinental',
-      'Europa League',
-      'Conference League',
-      'Mundial de Clubes',
-    ],
+    leagues: ['Argentine Liga Profesional'],
   },
   inglaterra: {
     name: 'Inglaterra',
-    leagues: [
-      'Premier League',
-      'Carabao Cup',
-      'FA Cup',
-    ],
+    leagues: ['Premier League', 'FA Cup', 'EFL Cup'],
   },
   espana: {
     name: 'España',
-    leagues: [
-      'La Liga',
-      'Copa del Rey',
-      'Supercopa',
-    ],
+    leagues: ['LaLiga', 'Copa del Rey', 'Supercopa'],
   },
   italia: {
     name: 'Italia',
-    leagues: [
-      'Serie A',
-      'Coppa Italia',
-      'Supercopa',
-    ],
+    leagues: ['Serie A', 'Coppa Italia'],
   },
   alemania: {
     name: 'Alemania',
-    leagues: [
-      'Bundesliga',
-      'DFB-Pokal',
-    ],
+    leagues: ['Bundesliga', 'DFB-Pokal'],
   },
 };
 
-// Default selected leagues (pre-selected on first load)
+// Default selected leagues (football-data.org)
 export const DEFAULT_SELECTED_LEAGUES = [
-  // Argentina
-  'Liga Profesional',
-  'Copa Argentina',
-  'Copa de la Liga',
-  // Internacional
-  'Champions League',
-  // Inglaterra
+  'UEFA Champions League',
+  'Copa Libertadores',
+  'Argentine Liga Profesional',
   'Premier League',
-  // España
-  'La Liga',
-  // Italia
+  'LaLiga',
   'Serie A',
-  // Alemania
   'Bundesliga',
 ];
 

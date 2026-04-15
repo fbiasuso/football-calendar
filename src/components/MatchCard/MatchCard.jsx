@@ -2,7 +2,7 @@
 import { formatTime } from '../../utils/dateUtils.js';
 
 export default function MatchCard({ match }) {
-  const { teams, status, league, date } = match;
+  const { teams, status, league, date, score } = match;
   
   const homeTeam = teams?.home || { name: 'N/A', badge: '' };
   const awayTeam = teams?.away || { name: 'N/A', badge: '' };
@@ -12,6 +12,8 @@ export default function MatchCard({ match }) {
     live: 'bg-red-500 text-white animate-pulse',
     finished: 'bg-gray-200 text-gray-600',
   };
+  
+  const showScore = score?.home != null && score?.away != null;
   
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
@@ -25,7 +27,10 @@ export default function MatchCard({ match }) {
           <span className="font-semibold text-gray-900 text-sm truncate">{homeTeam.name}</span>
         </div>
         
-        <span className="text-xs text-gray-400 flex-shrink-0">vs</span>
+        {/* Score or vs */}
+        <span className="text-sm font-bold text-gray-800 flex-shrink-0 px-2">
+          {showScore ? `${score.home} - ${score.away}` : 'vs'}
+        </span>
         
         <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
           <span className="font-semibold text-gray-900 text-sm truncate">{awayTeam.name}</span>
@@ -35,7 +40,8 @@ export default function MatchCard({ match }) {
         </div>
       </div>
       
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex justify-between items-center">
+        <span className="text-xs text-gray-500">{formatTime(date)}</span>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
           {status === 'pending' ? formatTime(date) : status === 'live' ? 'EN VIVO' : 'FINALIZADO'}
         </span>

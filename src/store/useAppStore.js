@@ -1,19 +1,8 @@
-// Zustand store for Football Calendar
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getMatches } from '../api/adapter.js';
 import { getDateKey } from '../utils/dateUtils.js';
-
-const DEFAULT_SELECTED_LEAGUES = [
-  'Liga Profesional',
-  'Copa Argentina',
-  'Copa de la Liga',
-  'Champions League',
-  'Premier League',
-  'La Liga',
-  'Serie A',
-  'Bundesliga',
-];
+import { DEFAULT_SELECTED_LEAGUES } from '../utils/leagueConfig.js';
 
 const useAppStore = create(
   persist(

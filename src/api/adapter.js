@@ -1,6 +1,5 @@
 // API Adapter Interface for Football Calendar
-// This interface abstracts the underlying API provider
-// Currently using SportSRC, can be swapped to another provider
+// Using football-data.org API (has scores!)
 
 /**
  * @typedef {Object} Match
@@ -28,8 +27,8 @@
  * @returns {Promise<Match[]>}
  */
 export async function getMatches(date) {
-  const { sportsrcClient } = await import('./sportsrc.js');
-  return sportsrcClient.getMatches(date);
+  const { footballDataClient } = await import('./footballData.js');
+  return footballDataClient.getMatches(date);
 }
 
 /**
@@ -38,8 +37,8 @@ export async function getMatches(date) {
  * @returns {Promise<Match[]>}
  */
 export async function getLiveMatches(date) {
-  const { sportsrcClient } = await import('./sportsrc.js');
-  return sportsrcClient.getLiveMatches(date);
+  const { footballDataClient } = await import('./footballData.js');
+  return footballDataClient.getLiveMatches(date);
 }
 
 /**
@@ -47,6 +46,6 @@ export async function getLiveMatches(date) {
  * @returns {Promise<Array<{id: string, name: string}[]>}
  */
 export async function getLeagues() {
-  const { sportsrcClient } = await import('./sportsrc.js');
-  return sportsrcClient.getLeagues();
+  const { footballDataClient } = await import('./footballData.js');
+  return footballDataClient.getCompetitions();
 }

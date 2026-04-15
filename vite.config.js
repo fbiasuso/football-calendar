@@ -10,4 +10,13 @@ export default defineConfig({
       plugins: [tailwindcss(), autoprefixer()],
     },
   },
+  server: {
+    proxy: {
+      '/api/football-data': {
+        target: 'https://api.football-data.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/football-data/, '/v4'),
+      },
+    },
+  },
 })
