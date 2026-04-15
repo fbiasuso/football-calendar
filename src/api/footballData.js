@@ -36,11 +36,33 @@ async function fetchWithRetry(endpoint, retries = 0) {
 }
 
 // Get matches for a date
+// Fetches a wider range to handle timezone differences (South American matches)
 export async function getMatches(date) {
-  const dateStr = typeof date === 'string' ? date : formatDate(date);
-  const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${dateStr}`);
+  const targetDate = typeof date === 'string' ? new Date(date) : new Date(date);
   
-  return (data.matches || []).map(normalizeMatch);
+  // Fetch from day before to day after to catch timezone edge cases
+  const prevDate = new Date(targetDate);
+  prevDate.setDate(prevDate.getDate() - 1);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+  
+  const dateFrom = formatDate(prevDate);
+  const dateTo = formatDate(nextDate);
+  
+  const data = await fetchWithRetry(`/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`);
+  
+  // Filter matches to only those on the target date
+  const targetDateStart = new Date(targetDate);
+  targetDateStart.setHours(0, 0, 0, 0);
+  const targetDateEnd = new Date(targetDate);
+  targetDateEnd.setHours(23, 59, 59, 999);
+  
+  return (data.matches || [])
+    .map(normalizeMatch)
+    .filter(match => {
+      const matchDate = new Date(match.date);
+      return matchDate >= targetDateStart && matchDate <= targetDateEnd;
+    });
 }
 
 // Get live matches
