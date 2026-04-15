@@ -176,18 +176,20 @@ function extractLeague(match) {
 function getMatchStatus(match) {
   const now = Date.now();
   const matchTime = match.date;
+  const thirtyMins = 30 * 60 * 1000;
   
   // If match time is in the future (more than 30 min), it's pending
-  if (matchTime > now + 30 * 60 * 1000) {
+  if (matchTime > now + thirtyMins) {
     return 'pending';
   }
   
-  // If match time is less than 2 hours ago, consider it recently finished
-  // For live detection, we need to check if we have actual score data
-  // For now, we'll consider any match within last 2 hours as potentially live
-  // This is a simplification - in production you'd check a live endpoint
+  // If match is within last 30 minutes, consider "live"
+  if (matchTime > now - thirtyMins && matchTime <= now + thirtyMins) {
+    return 'live';
+  }
   
-  return 'finished'; // SportSRC v1 doesn't have live status, default to finished
+  // Otherwise, it's finished
+  return 'finished';
 }
 
 /**
