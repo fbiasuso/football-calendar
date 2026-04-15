@@ -11,8 +11,13 @@ export default function MatchList({ matches }) {
   const processedMatches = useMemo(() => {
     if (!matches || matches.length === 0) return [];
     
-    // Filter by selected leagues
-    let filtered = matches.filter(m => selectedLeagues.includes(m.league));
+    // If no leagues selected, show all
+    let filtered;
+    if (!selectedLeagues || selectedLeagues.length === 0) {
+      filtered = matches;
+    } else {
+      filtered = matches.filter(m => selectedLeagues.includes(m.league));
+    }
     
     if (sortMode === 'time') {
       // Sort by time (all mixed together)
