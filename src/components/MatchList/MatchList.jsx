@@ -79,6 +79,11 @@ export default function MatchList({ matches }) {
   return (
     <div className="space-y-2">
       {processedMatches.map((item, index) => {
+        // Skip invalid items
+        if (!item || !item.type) {
+          return null;
+        }
+        
         if (item.type === 'header') {
           return (
             <div 
@@ -90,6 +95,11 @@ export default function MatchList({ matches }) {
               </h3>
             </div>
           );
+        }
+        
+        // Ensure match data exists
+        if (!item.data || !item.data.id) {
+          return null;
         }
         
         return (
