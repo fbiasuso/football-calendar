@@ -2,71 +2,42 @@
 import { formatTime } from '../../utils/dateUtils.js';
 
 export default function MatchCard({ match }) {
-  const { title, teams, status, league, date } = match;
+  const { teams, status, league, date } = match;
   
-  const homeTeam = teams?.home || { name: 'por confirmar', badge: '' };
-  const awayTeam = teams?.away || { name: 'por confirmar', badge: '' };
+  const homeTeam = teams?.home || { name: 'N/A', badge: '' };
+  const awayTeam = teams?.away || { name: 'N/A', badge: '' };
   
-  // Status badge color
   const statusColors = {
-    pending: 'bg-gray-200 text-gray-700',
+    pending: 'bg-yellow-100 text-yellow-800',
     live: 'bg-red-500 text-white animate-pulse',
-    finished: 'bg-green-200 text-green-700',
-  };
-  
-  const statusLabel = {
-    pending: formatTime(date),
-    live: 'EN VIVO',
-    finished: 'FINALIZADO',
+    finished: 'bg-gray-200 text-gray-600',
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
-      {/* League name */}
-      <div className="text-xs text-gray-500 mb-2 font-medium">
-        {league}
-      </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+      <div className="text-xs font-medium text-gray-500 mb-2">{league}</div>
       
-      {/* Teams */}
-      <div className="flex items-center justify-between">
-        {/* Home team */}
-        <div className="flex items-center gap-3 flex-1">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {homeTeam.badge && (
-            <img 
-              src={homeTeam.badge} 
-              alt={homeTeam.name}
-              className="w-8 h-8"
-            />
+            <img src={homeTeam.badge} alt="" className="w-6 h-6 flex-shrink-0" />
           )}
-          <span className="font-semibold text-gray-900 text-sm">
-            {homeTeam.name}
-          </span>
+          <span className="font-semibold text-gray-900 text-sm truncate">{homeTeam.name}</span>
         </div>
         
-        {/* VS / Score */}
-        <div className="px-3 text-gray-400 text-xs">
-          vs
-        </div>
+        <span className="text-xs text-gray-400 flex-shrink-0">vs</span>
         
-        {/* Away team */}
-        <div className="flex items-center gap-3 flex-1 justify-end">
-          <span className="font-semibold text-gray-900 text-sm text-right">
-            {awayTeam.name}
-          </span>
+        <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+          <span className="font-semibold text-gray-900 text-sm truncate">{awayTeam.name}</span>
           {awayTeam.badge && (
-            <img 
-              src={awayTeam.badge} 
-              alt={awayTeam.name}
-              className="w-8 h-8"
-            />
+            <img src={awayTeam.badge} alt="" className="w-6 h-6 flex-shrink-0" />
           )}
         </div>
       </div>
       
-      {/* Status badge */}
-      <div className="mt-3 flex justify-end">
-        <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColors[status]}`}>
-          {statusLabel[status]}
+      <div className="mt-2 flex justify-end">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
+          {status === 'pending' ? formatTime(date) : status === 'live' ? 'EN VIVO' : 'FINALIZADO'}
         </span>
       </div>
     </div>

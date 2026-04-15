@@ -180,7 +180,6 @@ function extractLeague(match) {
 
 /**
  * Determine match status from match data
- * SportSRC doesn't provide status directly - infer from timestamp
  */
 function getMatchStatus(match) {
   const now = Date.now();
@@ -188,22 +187,9 @@ function getMatchStatus(match) {
   const thirtyMins = 30 * 60 * 1000;
   const twoHours = 120 * 60 * 1000;
   
-  // If match is more than 30 min in the future → pending
-  if (matchTime > now + thirtyMins) {
-    return 'pending';
-  }
-  
-  // If match is within 30 min to start → pending (about to start)
-  if (matchTime > now && matchTime <= now + thirtyMins) {
-    return 'pending';
-  }
-  
-  // If match started less than 2 hours ago → live (still going)
-  if (matchTime <= now && matchTime > now - twoHours) {
-    return 'live';
-  }
-  
-  // Otherwise → finished
+  if (matchTime > now + thirtyMins) return 'pending';
+  if (matchTime > now && matchTime <= now + thirtyMins) return 'pending';
+  if (matchTime <= now && matchTime > now - twoHours) return 'live';
   return 'finished';
 }
   
