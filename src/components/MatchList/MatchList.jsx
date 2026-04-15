@@ -20,8 +20,10 @@ export default function MatchList({ matches }) {
     }
     
     if (sortMode === 'time') {
-      // Sort by time (all mixed together)
-      return filtered.sort((a, b) => a.date - b.date);
+      // Sort by time (all mixed together), wrap each match
+      return filtered
+        .sort((a, b) => a.date - b.date)
+        .map(match => ({ type: 'match', data: match }));
     }
     
     // Sort by league ( Argentina first, then others by time within each league)

@@ -178,13 +178,19 @@ function getMatchStatus(match) {
   const matchTime = match.date;
   const thirtyMins = 30 * 60 * 1000;
   
-  // If match time is in the future (more than 30 min), it's pending
+  // Future match: more than 30 min to start
   if (matchTime > now + thirtyMins) {
     return 'pending';
   }
   
-  // If match is within last 30 minutes, consider "live"
-  if (matchTime > now - thirtyMins && matchTime <= now + thirtyMins) {
+  // Match starts within 30 min but hasn't started yet → pending (about to start)
+  if (matchTime > now && matchTime <= now + thirtyMins) {
+    return 'pending';
+  }
+  
+  // Match is within expected time (started but no end time data) → live
+  // We'll mark as live if within 2 hours of start time (120 min)
+  if (matchTime > now - thirtyMins && matchTime <= now + (120 * 60 * 1000)) {
     return 'live';
   }
   
@@ -254,7 +260,6 @@ export async function getMatches(date) {
       const altEnd = altStart + 24 * 60 * 60 * 1000;
       const altMatches = matches.filter(m => m.date >= altStart && m.date < altEnd);
       if (altMatches.length > 0) {
-        console.log(`Showing matches from ${i} day${i !== 1 ? 's' : ''} ${i < 0 ? 'before' : 'after'}`);
         return altMatches.map(normalizeMatch).sort((a, b) => a.date - b.date);
       }
     }
