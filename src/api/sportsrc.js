@@ -85,11 +85,12 @@ function formatDateKey(date) {
 /**
  * Extract league name from match data
  * SportSRC doesn't provide league name directly, so we infer from title/ID
+ * We also use team names to identify leagues
  */
 function extractLeague(match) {
   const searchText = (match.title + ' ' + match.id).toLowerCase();
   
-  // Try to match known leagues
+  // Try to match known leagues first
   const leaguePatterns = [
     { pattern: 'liga profesional', name: 'Liga Profesional' },
     { pattern: 'copa argentina', name: 'Copa Argentina' },
@@ -98,6 +99,7 @@ function extractLeague(match) {
     { pattern: 'sudamericana', name: 'Copa Sudamericana' },
     { pattern: 'champions', name: 'Champions League' },
     { pattern: 'intercontinental', name: 'Copa Intercontinental' },
+    { pattern: 'ucl ', name: 'Champions League' },
     { pattern: 'europa league', name: 'Europa League' },
     { pattern: 'conference', name: 'Conference League' },
     { pattern: 'mundial de clubes', name: 'Mundial de Clubes' },
@@ -116,6 +118,51 @@ function extractLeague(match) {
   for (const { pattern, name } of leaguePatterns) {
     if (searchText.includes(pattern)) {
       return name;
+    }
+  }
+  
+  // Try to deduce league from team names
+  const teamNamePatterns = {
+    'Liga Profesional': [
+      'river', 'boca', 'independiente', 'racing', 'san lorenzo', 'huracán', 'Vélez',
+      'lanús', 'godoy cruz', 'belgrano', 'central córdoba', 'platense',
+      'talleres', 'unión', 'huracán', 'boca juniors', 'river plate', 'club atlético',
+      'gimnasia', 'estudiantes', 'rosario central', 'newell', 'atético tucumán',
+      'banfield', 'patronato', 'arsenal', 'chaco for ever', 'quilmes', 'brown'
+    ],
+    'Copa Argentina': ['copa argentina'],
+    'Copa de la Liga': ['copa de la liga'],
+    'Copa Libertadores': ['libertadores'],
+    'Copa Sudamericana': ['sudamericana'],
+    'Champions League': [
+      'real madrid', 'barcelona', 'bayern', 'manchester city', 'liverpool', 
+      'chelsea', 'arsenal', 'tottenham', 'psg', 'juventus', 'inter', 'milan'
+    ],
+    'Premier League': [
+      'manchester united', 'manchester city', 'liverpool', 'chelsea', 
+      'arsenal', 'tottenham', 'newcastle', 'west ham', 'aston villa', 
+      'fulham', 'wolves', 'brighton', 'crystal palace', 'everton'
+    ],
+    'La Liga': [
+      'real madrid', 'barcelona', 'atlético madrid', 'sevilla', 
+      'valencia', 'villarreal', 'real betis', 'real sociedad', 'osasuna', 'celta'
+    ],
+    'Serie A': [
+      'juventus', 'inter', 'milan', 'napoli', 'roma', 'lazio', 
+      'fiorentina', 'atalanta', 'torino', 'sampdoria', 'bologna'
+    ],
+    'Bundesliga': [
+      'bayern munich', 'borussia dortmund', 'rb leipzig', 'leverkusen',
+      'frankfurt', 'wolfsburg', 'stuttgart', ' Freiburg'
+    ],
+  };
+  
+  const titleLower = match.title?.toLowerCase() || '';
+  for (const [league, teams] of Object.entries(teamNamePatterns)) {
+    for (const team of teams) {
+      if (titleLower.includes(team)) {
+        return league;
+      }
     }
   }
   
@@ -174,23 +221,44 @@ function normalizeMatch(match) {
 
 /**
  * Get all matches for a date
+ * Note: SportSRC API doesn't support date filtering, returns all matches
+ * We filter by date client-side
  * @param {Date|string} date
  * @returns {Promise<import('./adapter.js').Match[]>}
  */
 export async function getMatches(date) {
   const matches = await fetchMatches(date);
   
-  // Filter matches for the requested date
+  // Parse target date
   const targetDate = new Date(date);
   targetDate.setHours(0, 0, 0, 0);
   const targetDateStart = targetDate.getTime();
   const targetDateEnd = targetDateStart + 24 * 60 * 60 * 1000;
   
-  return matches
-    .filter(match => {
-      const matchDate = match.date;
-      return matchDate >= targetDateStart && matchDate < targetDateEnd;
-    })
+  // Filter matches for the requested date
+  const filtered = matches.filter(match => {
+    const matchDate = match.date;
+    return matchDate >= targetDateStart && matchDate < targetDateEnd;
+  });
+  
+  // If no matches for date, return matches from nearby days
+  if (filtered.length === 0) {
+    // Try 3 days before and after
+    for (let i = -3; i <= 3; i++) {
+      if (i === 0) continue;
+      const altDate = new Date(targetDate);
+      altDate.setDate(altDate.getDate() + i);
+      const altStart = altDate.getTime();
+      const altEnd = altStart + 24 * 60 * 60 * 1000;
+      const altMatches = matches.filter(m => m.date >= altStart && m.date < altEnd);
+      if (altMatches.length > 0) {
+        console.log(`Showing matches from ${i} day${i !== 1 ? 's' : ''} ${i < 0 ? 'before' : 'after'}`);
+        return altMatches.map(normalizeMatch).sort((a, b) => a.date - b.date);
+      }
+    }
+  }
+  
+  return filtered
     .map(normalizeMatch)
     .sort((a, b) => a.date - b.date);
 }
