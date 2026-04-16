@@ -46,14 +46,12 @@ export default function MatchCard({ match }) {
       });
       
       // Calculate aggregate: first leg + current leg
-      // Note: current match might be away or home, need to handle accordingly
       if (firstLegScore) {
         setAggregateScore({
           home: firstLegScore.home + (score?.home ?? 0),
           away: firstLegScore.away + (score?.away ?? 0),
         });
       } else {
-        // No first leg found - need more complex lookup
         console.log('First leg not found');
       }
     } catch (error) {
@@ -66,47 +64,6 @@ export default function MatchCard({ match }) {
   // Only display aggregate if it actually exists and is different from main score
   const displayAggregate = aggregateScore && 
     (aggregateScore.home !== score?.home || aggregateScore.away !== score?.away);
-  
-  const showScore = score?.home != null && score?.away != null;
-  
-  // Only show "Ver Global" for knockout stages (not group stages)
-  // And only if we actually have aggregate data to show
-  const isKnockoutMatch = KNOCKOUT_STAGES.includes(stage) && status === 'finished';
-  
-  // Only display aggregate if it actually exists (different from main score)
-  const displayAggregate = aggregateScore && 
-    (aggregateScore.home !== score?.home || aggregateScore.away !== score?.away);
-  
-  const handleShowAggregate = async () => {
-    if (aggregateScore !== null) {
-      setAggregateScore(null);
-      return;
-    }
-    
-    setLoadingAggregate(true);
-    try {
-      // Fetch full match details to get extraTime/penalties (aggregate)
-      const matchDetails = await getMatchById(match.id);
-      
-      const extraTime = matchDetails?.score?.extraTime;
-      const penalties = matchDetails?.score?.penalties;
-      
-      // Only show if there's actual extraTime or penalties data (not just fullTime)
-      if (extraTime?.home != null || penalties?.home != null) {
-        setAggregateScore({
-          home: extraTime?.home ?? penalties?.home,
-          away: extraTime?.away ?? penalties?.away,
-        });
-      } else {
-        // No extra aggregate data available - hide button or show message
-        console.log('No aggregate data available for this match');
-      }
-    } catch (error) {
-      console.error('Error fetching aggregate:', error);
-    } finally {
-      setLoadingAggregate(false);
-    }
-  };
   
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
