@@ -2,7 +2,7 @@
 import { formatTime } from '../../utils/dateUtils.js';
 
 export default function MatchCard({ match }) {
-  const { teams, status, league, date, score } = match;
+  const { teams, status, league, date, score, aggregateScore } = match;
   
   const homeTeam = teams?.home || { name: 'N/A', badge: '' };
   const awayTeam = teams?.away || { name: 'N/A', badge: '' };
@@ -14,6 +14,10 @@ export default function MatchCard({ match }) {
   };
   
   const showScore = score?.home != null && score?.away != null;
+  const showAggregate = aggregateScore?.home != null && aggregateScore?.away != null;
+  
+  // Determine if we should show aggregate (only for knockout stages with 2 legs)
+  const isKnockoutWithAggregate = showAggregate && status === 'finished';
   
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
@@ -27,10 +31,17 @@ export default function MatchCard({ match }) {
           <span className="font-semibold text-gray-900 text-sm truncate">{homeTeam.name}</span>
         </div>
         
-        {/* Score or vs */}
-        <span className="text-sm font-bold text-gray-800 flex-shrink-0 px-2">
-          {showScore ? `${score.home} - ${score.away}` : 'vs'}
-        </span>
+        {/* Score display - main score and aggregate if applicable */}
+        <div className="flex flex-col items-center min-w-[80px]">
+          <span className="text-2xl font-bold text-gray-900">
+            {showScore ? `${score.home} - ${score.away}` : 'vs'}
+          </span>
+          {isKnockoutWithAggregate && (
+            <span className="text-xs text-gray-400 mt-0.5">
+              ({aggregateScore.home} - {aggregateScore.away})
+            </span>
+          )}
+        </div>
         
         <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
           <span className="font-semibold text-gray-900 text-sm truncate">{awayTeam.name}</span>
