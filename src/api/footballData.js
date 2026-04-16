@@ -85,7 +85,18 @@ export async function getCompetitions() {
 // Get single match details (for aggregate score in knockout ties)
 export async function getMatchById(matchId) {
   const data = await fetchWithRetry(`/matches/${matchId}`);
-  return normalizeMatch(data);
+  // Return raw match data to get access to score.extraTime, score.penalties, etc.
+  return {
+    id: String(data.id),
+    score: {
+      home: data.score?.fullTime?.home ?? null,
+      away: data.score?.fullTime?.away ?? null,
+      extraTime: data.score?.extraTime || null,
+      penalties: data.score?.penalties || null,
+    },
+    stage: data.stage || null,
+    matchday: data.matchday || null,
+  };
 }
 
 function formatDate(date) {
@@ -117,8 +128,6 @@ function normalizeMatch(match) {
   const homeTeam = match.homeTeam || {};
   const awayTeam = match.awayTeam || {};
   const score = match.score?.fullTime || {};
-  const extraTime = match.score?.extraTime || {};
-  const penalties = match.score?.penalties || {};
   
   return {
     id: String(match.id),
@@ -126,15 +135,20 @@ function normalizeMatch(match) {
     date: new Date(match.utcDate).getTime(),
     league: match.competition?.name || 'Otros',
     leagueId: match.competition?.id,
+    competitionCode: match.competition?.code || null,
     stage: match.stage || null, // ROUND_OF_16, QUARTER_FINALS, etc.
+    matchday: match.matchday || null,
+    season: match.season?.id || null,
     teams: {
       home: {
         name: homeTeam.name || 'N/A',
         badge: homeTeam.crest || '',
+        id: homeTeam.id,
       },
       away: {
         name: awayTeam.name || 'N/A',
         badge: awayTeam.crest || '',
+        id: awayTeam.id,
       },
     },
     status: mapStatus(match.status),
@@ -142,13 +156,6 @@ function normalizeMatch(match) {
       home: score.home ?? null,
       away: score.away ?? null,
     },
-    // Aggregate score for two-legged ties (extraTime is the aggregate after 180 min)
-    aggregateScore: extraTime.home != null || penalties.home != null
-      ? {
-          home: extraTime.home ?? penalties.home ?? score.home,
-          away: extraTime.away ?? penalties.away ?? score.away,
-        }
-      : null,
     minute: match.matchMinutes || null,
   };
 }

@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { formatTime } from '../../utils/dateUtils.js';
 import { getMatchById } from '../../api/adapter.js';
 
-// Leagues that typically have two-legged ties
-const KNOCKOUT_LEAGUES = ['UEFA Champions League', 'Copa Libertadores', 'Copa Sudamericana'];
+// Knockout stages that have two-legged ties
+const KNOCKOUT_STAGES = ['ROUND_OF_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'];
 
 export default function MatchCard({ match }) {
-  const { teams, status, league, date, score } = match;
-  const [showAggregate, setShowAggregate] = useState(null);
+  const { teams, status, league, date, score, stage, matchday } = match;
+  const [aggregateScore, setAggregateScore] = useState(null);
   const [loadingAggregate, setLoadingAggregate] = useState(false);
   
   const homeTeam = teams?.home || { name: 'N/A', badge: '' };
@@ -22,20 +22,32 @@ export default function MatchCard({ match }) {
   
   const showScore = score?.home != null && score?.away != null;
   
-  // Only show "Ver Global" for finished knockout matches
-  const isKnockoutMatch = KNOCKOUT_LEAGUES.some(l => league?.includes(l)) && status === 'finished';
+  // Only show "Ver Global" for knockout stages (not group stages)
+  const isKnockoutMatch = KNOCKOUT_STAGES.includes(stage) && status === 'finished';
   
   const handleShowAggregate = async () => {
-    if (showAggregate !== null) {
-      setShowAggregate(null);
+    if (aggregateScore !== null) {
+      setAggregateScore(null);
       return;
     }
     
     setLoadingAggregate(true);
     try {
+      // Fetch full match details to get extraTime/penalties (aggregate)
       const matchDetails = await getMatchById(match.id);
-      const agg = matchDetails?.aggregateScore;
-      setShowAggregate(agg);
+      
+      const extraTime = matchDetails?.score?.extraTime;
+      const penalties = matchDetails?.score?.penalties;
+      
+      if (extraTime?.home != null || penalties?.home != null) {
+        setAggregateScore({
+          home: extraTime?.home ?? penalties?.home ?? matchDetails?.score?.home,
+          away: extraTime?.away ?? penalties?.away ?? matchDetails?.score?.away,
+        });
+      } else {
+        // No extra aggregate, show just the score
+        setAggregateScore(matchDetails?.score);
+      }
     } catch (error) {
       console.error('Error fetching aggregate:', error);
     } finally {
@@ -45,7 +57,9 @@ export default function MatchCard({ match }) {
   
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-      <div className="text-xs font-medium text-gray-500 mb-2">{league}</div>
+      <div className="text-xs font-medium text-gray-500 mb-2">
+        {league} {matchday && `#${matchday}`}
+      </div>
       
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -60,9 +74,9 @@ export default function MatchCard({ match }) {
           <span className="text-2xl font-bold text-gray-900">
             {showScore ? `${score.home} - ${score.away}` : 'vs'}
           </span>
-          {showAggregate && (
+          {aggregateScore && isKnockoutMatch && (
             <span className="text-xs text-gray-400 mt-0.5">
-              ({showAggregate.home} - {showAggregate.away})
+              ({aggregateScore.home} - {aggregateScore.away})
             </span>
           )}
         </div>
@@ -79,14 +93,14 @@ export default function MatchCard({ match }) {
         <span className="text-xs text-gray-500">{formatTime(date)}</span>
         
         <div className="flex items-center gap-2">
-          {/* Botón "Ver Global" para partidos de ida/vuelta */}
+          {/* Botón "Ver Global" solo para partidos de eliminación directa */}
           {isKnockoutMatch && (
             <button
               onClick={handleShowAggregate}
               disabled={loadingAggregate}
               className="text-xs text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
             >
-              {loadingAggregate ? '...' : showAggregate ? 'Ocultar' : 'Ver Global'}
+              {loadingAggregate ? '...' : aggregateScore ? 'Ocultar' : 'Ver Global'}
             </button>
           )}
           
