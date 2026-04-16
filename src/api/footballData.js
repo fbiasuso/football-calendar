@@ -135,9 +135,16 @@ export async function findFirstLegMatch(match) {
     });
     
     if (firstLeg) {
+      // Check if home/away is swapped between legs
+      const isSameHome = firstLeg.homeTeam?.id === homeTeamId;
+      
       return {
-        home: firstLeg.score?.fullTime?.home ?? 0,
-        away: firstLeg.score?.fullTime?.away ?? 0,
+        home: isSameHome 
+          ? (firstLeg.score?.fullTime?.home ?? 0) 
+          : (firstLeg.score?.fullTime?.away ?? 0),
+        away: isSameHome 
+          ? (firstLeg.score?.fullTime?.away ?? 0) 
+          : (firstLeg.score?.fullTime?.home ?? 0),
       };
     }
   } catch (error) {

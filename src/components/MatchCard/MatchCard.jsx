@@ -36,7 +36,7 @@ export default function MatchCard({ match }) {
       // Get current match details
       const matchDetails = await getMatchById(match.id);
       
-      // Try to find the first leg
+      // Try to find the first leg - pass current match team order too
       const firstLegScore = await findFirstLegMatch({
         homeTeam: { id: matchDetails.homeTeam?.id },
         awayTeam: { id: matchDetails.awayTeam?.id },
