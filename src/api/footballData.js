@@ -118,15 +118,18 @@ export async function findFirstLegMatch(match) {
   const dateStr = formatDate(prevDate);
   
   try {
-    // Fetch matches from last 15 days with season filter
-    const seasonIdParam = seasonId ? `&seasonIds=${seasonId}` : '';
-    const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}${seasonIdParam}`);
+    // Use competition-specific endpoint instead of generic matches
+    // This is more reliable than the /matches endpoint
+    const data = await fetchWithRetry(`/competitions/${competitionId}/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}`);
+    
+    console.log('Found matches for first leg search:', data.matches?.length);
     
     // Find the first leg: same teams in same competition, earlier date
     const firstLeg = (data.matches || []).find(m => {
+      console.log('Checking match:', m.id, m.competition?.id, competitionId, m.homeTeam?.name, 'vs', m.awayTeam?.name);
       if (String(m.id) === String(match.id)) return false;
       if (m.competition?.id !== competitionId) return false;
-      if (m.season?.id !== seasonId) return false;
+      if (seasonId && m.season?.id !== seasonId) return false;
       
       // Check if same teams (home/away can be swapped)
       const sameTeams = 
