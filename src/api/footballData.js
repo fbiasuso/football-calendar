@@ -118,8 +118,8 @@ export async function findFirstLegMatch(match) {
   const dateStr = formatDate(prevDate);
   
   try {
-    // Fetch matches from last week in this competition
-    const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}&competitionId=${competitionId}`);
+    // Fetch matches from last 15 days in this competition
+    const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}&competitions=${competitionId}`);
     
     // Find the first leg: same teams, earlier date
     const firstLeg = (data.matches || []).find(m => {
