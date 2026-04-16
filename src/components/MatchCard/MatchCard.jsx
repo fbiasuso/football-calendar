@@ -23,7 +23,12 @@ export default function MatchCard({ match }) {
   const showScore = score?.home != null && score?.away != null;
   
   // Only show "Ver Global" for knockout stages (not group stages)
+  // And only if we actually have aggregate data to show
   const isKnockoutMatch = KNOCKOUT_STAGES.includes(stage) && status === 'finished';
+  
+  // Only display aggregate if it actually exists (different from main score)
+  const displayAggregate = aggregateScore && 
+    (aggregateScore.home !== score?.home || aggregateScore.away !== score?.away);
   
   const handleShowAggregate = async () => {
     if (aggregateScore !== null) {
@@ -39,14 +44,15 @@ export default function MatchCard({ match }) {
       const extraTime = matchDetails?.score?.extraTime;
       const penalties = matchDetails?.score?.penalties;
       
+      // Only show if there's actual extraTime or penalties data (not just fullTime)
       if (extraTime?.home != null || penalties?.home != null) {
         setAggregateScore({
-          home: extraTime?.home ?? penalties?.home ?? matchDetails?.score?.home,
-          away: extraTime?.away ?? penalties?.away ?? matchDetails?.score?.away,
+          home: extraTime?.home ?? penalties?.home,
+          away: extraTime?.away ?? penalties?.away,
         });
       } else {
-        // No extra aggregate, show just the score
-        setAggregateScore(matchDetails?.score);
+        // No extra aggregate data available - hide button or show message
+        console.log('No aggregate data available for this match');
       }
     } catch (error) {
       console.error('Error fetching aggregate:', error);
@@ -74,7 +80,7 @@ export default function MatchCard({ match }) {
           <span className="text-2xl font-bold text-gray-900">
             {showScore ? `${score.home} - ${score.away}` : 'vs'}
           </span>
-          {aggregateScore && isKnockoutMatch && (
+          {displayAggregate && (
             <span className="text-xs text-gray-400 mt-0.5">
               ({aggregateScore.home} - {aggregateScore.away})
             </span>
