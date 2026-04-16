@@ -157,4 +157,5 @@ export const footballDataClient = {
   getMatches,
   getLiveMatches,
   getCompetitions,
+  getMatchById,
 };
