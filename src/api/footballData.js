@@ -96,7 +96,55 @@ export async function getMatchById(matchId) {
     },
     stage: data.stage || null,
     matchday: data.matchday || null,
+    homeTeam: { id: data.homeTeam?.id },
+    awayTeam: { id: data.awayTeam?.id },
+    competition: { id: data.competition?.id },
+    season: { id: data.season?.id },
+    utcDate: data.utcDate,
   };
+}
+
+// Get first leg match for aggregate calculation
+export async function findFirstLegMatch(match) {
+  const matchDate = new Date(match.utcDate);
+  const seasonId = match.season?.id;
+  const competitionId = match.competition?.id;
+  const homeTeamId = match.homeTeam?.id;
+  const awayTeamId = match.awayTeam?.id;
+  
+  // Search for matches in the 7 days before this match
+  const prevDate = new Date(matchDate);
+  prevDate.setDate(prevDate.getDate() - 7);
+  const dateStr = formatDate(prevDate);
+  
+  try {
+    // Fetch matches from last week in this competition
+    const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}&competitionId=${competitionId}`);
+    
+    // Find the first leg: same teams, earlier date
+    const firstLeg = (data.matches || []).find(m => {
+      if (m.id === match.id) return false;
+      if (m.season?.id !== seasonId) return false;
+      
+      // Check if same teams (home/away can be swapped)
+      const sameTeams = 
+        (m.homeTeam?.id === homeTeamId && m.awayTeam?.id === awayTeamId) ||
+        (m.homeTeam?.id === awayTeamId && m.awayTeam?.id === homeTeamId);
+      
+      return sameTeams;
+    });
+    
+    if (firstLeg) {
+      return {
+        home: firstLeg.score?.fullTime?.home ?? 0,
+        away: firstLeg.score?.fullTime?.away ?? 0,
+      };
+    }
+  } catch (error) {
+    console.warn('Error finding first leg:', error);
+  }
+  
+  return null;
 }
 
 function formatDate(date) {
@@ -165,4 +213,5 @@ export const footballDataClient = {
   getLiveMatches,
   getCompetitions,
   getMatchById,
+  findFirstLegMatch,
 };

@@ -1,13 +1,13 @@
 // MatchCard component - Individual match display
 import { useState } from 'react';
 import { formatTime } from '../../utils/dateUtils.js';
-import { getMatchById } from '../../api/adapter.js';
+import { getMatchById, findFirstLegMatch } from '../../api/adapter.js';
 
 // Knockout stages that have two-legged ties
 const KNOCKOUT_STAGES = ['ROUND_OF_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'];
 
 export default function MatchCard({ match }) {
-  const { teams, status, league, date, score, stage, matchday } = match;
+  const { teams, status, league, date, score, stage, matchday, leagueId, season } = match;
   const [aggregateScore, setAggregateScore] = useState(null);
   const [loadingAggregate, setLoadingAggregate] = useState(false);
   
@@ -19,6 +19,53 @@ export default function MatchCard({ match }) {
     live: 'bg-red-500 text-white animate-pulse',
     finished: 'bg-gray-200 text-gray-600',
   };
+  
+  const showScore = score?.home != null && score?.away != null;
+  
+  // Only show "Ver Global" for knockout stages (not group stages)
+  const isKnockoutMatch = KNOCKOUT_STAGES.includes(stage) && status === 'finished';
+  
+  const handleShowAggregate = async () => {
+    if (aggregateScore !== null) {
+      setAggregateScore(null);
+      return;
+    }
+    
+    setLoadingAggregate(true);
+    try {
+      // Get current match details
+      const matchDetails = await getMatchById(match.id);
+      
+      // Try to find the first leg
+      const firstLegScore = await findFirstLegMatch({
+        homeTeam: { id: matchDetails.homeTeam?.id },
+        awayTeam: { id: matchDetails.awayTeam?.id },
+        competition: { id: matchDetails.competition?.id },
+        season: { id: matchDetails.season?.id },
+        utcDate: matchDetails.utcDate,
+      });
+      
+      // Calculate aggregate: first leg + current leg
+      // Note: current match might be away or home, need to handle accordingly
+      if (firstLegScore) {
+        setAggregateScore({
+          home: firstLegScore.home + (score?.home ?? 0),
+          away: firstLegScore.away + (score?.away ?? 0),
+        });
+      } else {
+        // No first leg found - need more complex lookup
+        console.log('First leg not found');
+      }
+    } catch (error) {
+      console.error('Error fetching aggregate:', error);
+    } finally {
+      setLoadingAggregate(false);
+    }
+  };
+  
+  // Only display aggregate if it actually exists and is different from main score
+  const displayAggregate = aggregateScore && 
+    (aggregateScore.home !== score?.home || aggregateScore.away !== score?.away);
   
   const showScore = score?.home != null && score?.away != null;
   

@@ -59,3 +59,13 @@ export async function getMatchById(matchId) {
   const { footballDataClient } = await import('./footballData.js');
   return footballDataClient.getMatchById(matchId);
 }
+
+/**
+ * Find first leg match for aggregate calculation
+ * @param {Object} match - Match object with team IDs and date info
+ * @returns {Promise<{home: number, away: number}|null>}
+ */
+export async function findFirstLegMatch(match) {
+  const { footballDataClient } = await import('./footballData.js');
+  return footballDataClient.findFirstLegMatch(match);
+}
