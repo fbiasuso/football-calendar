@@ -49,3 +49,13 @@ export async function getLeagues() {
   const { footballDataClient } = await import('./footballData.js');
   return footballDataClient.getCompetitions();
 }
+
+/**
+ * Get single match details (for aggregate score in knockout ties)
+ * @param {string} matchId
+ * @returns {Promise<Match>}
+ */
+export async function getMatchById(matchId) {
+  const { footballDataClient } = await import('./footballData.js');
+  return footballDataClient.getMatchById(matchId);
+}

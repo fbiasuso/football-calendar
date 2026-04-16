@@ -82,6 +82,12 @@ export async function getCompetitions() {
   }));
 }
 
+// Get single match details (for aggregate score in knockout ties)
+export async function getMatchById(matchId) {
+  const data = await fetchWithRetry(`/matches/${matchId}`);
+  return normalizeMatch(data);
+}
+
 function formatDate(date) {
   const d = new Date(date);
   const year = d.getFullYear();
@@ -111,6 +117,8 @@ function normalizeMatch(match) {
   const homeTeam = match.homeTeam || {};
   const awayTeam = match.awayTeam || {};
   const score = match.score?.fullTime || {};
+  const extraTime = match.score?.extraTime || {};
+  const penalties = match.score?.penalties || {};
   
   return {
     id: String(match.id),
@@ -118,6 +126,7 @@ function normalizeMatch(match) {
     date: new Date(match.utcDate).getTime(),
     league: match.competition?.name || 'Otros',
     leagueId: match.competition?.id,
+    stage: match.stage || null, // ROUND_OF_16, QUARTER_FINALS, etc.
     teams: {
       home: {
         name: homeTeam.name || 'N/A',
@@ -133,6 +142,13 @@ function normalizeMatch(match) {
       home: score.home ?? null,
       away: score.away ?? null,
     },
+    // Aggregate score for two-legged ties (extraTime is the aggregate after 180 min)
+    aggregateScore: extraTime.home != null || penalties.home != null
+      ? {
+          home: extraTime.home ?? penalties.home ?? score.home,
+          away: extraTime.away ?? penalties.away ?? score.away,
+        }
+      : null,
     minute: match.matchMinutes || null,
   };
 }
