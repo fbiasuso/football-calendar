@@ -112,9 +112,9 @@ export async function findFirstLegMatch(match) {
   const homeTeamId = match.homeTeam?.id;
   const awayTeamId = match.awayTeam?.id;
   
-  // Search for matches in the 7 days before this match
+  // Search for matches in the 15 days before this match
   const prevDate = new Date(matchDate);
-  prevDate.setDate(prevDate.getDate() - 7);
+  prevDate.setDate(prevDate.getDate() - 15);
   const dateStr = formatDate(prevDate);
   
   try {
