@@ -5,19 +5,32 @@
 **Project Name**: Football Calendar  
 **Type**: SPA (Single Page Application) - Web App  
 **Tech Stack**: React 18 + Vite + Tailwind CSS + Zustand  
-**API**: SportSRC (free tier, 1000 req/day, no API key required)
+**API**: football-data.org (free tier, 1000 req/day, API key required)
 
 ## Architecture
 
 ```
 src/
-├── api/              # Capa de abstracción API (Adapter Pattern)
-│   ├── sportsrc.js   # Implementación SportSRC
-│   └── adapter.js    # Interfaz común (para cambiar de API)
-├── components/      # Componentes React
-├── hooks/           # Custom hooks
-├── store/           # Zustand stores
-└── utils/           # Helpers
+├── api/                    # API abstraction layer (Adapter Pattern)
+│   ├── adapter.js           # Common interface for API switching
+│   ├── footballData.js      # football-data.org client (current)
+│   └── sportsrc.js          # SportSRC client (deprecated - no scores)
+├── components/             # React components
+│   ├── MatchCard/           # Match display with scores
+│   ├── MatchList/           # Match list with sorting
+│   ├── LeagueFilter/        # League filter checkboxes
+│   ├── DateNav/             # Date navigation
+│   └── SortControl/         # Sort mode toggle
+├── hooks/                  # Custom hooks
+│   ├── useMatches.js        # Fetch, cache, polling for matches
+│   └── useLeagues.js        # League handling
+├── store/                  # Zustand store
+│   └── useAppStore.js       # Global state management
+└── utils/                  # Helper functions
+    ├── leagueConfig.js      # League configuration
+    ├── leagueDetector.js    # League detection
+    ├── leagueUtils.js       # League utilities
+    └── dateUtils.js         # Date utilities
 ```
 
 ## Features
@@ -30,53 +43,74 @@ src/
 4. **Navegación de fechas**: Día anterior / siguiente
 5. **Actualización**: Botón manual + opcional auto-polling (5min normal, 1min en últimos 5min)
 6. **Cache**: localStorage para partidos no-vivos
+7. **Score display**: Mostrar scores de partidos
+8. **Ver Global**: Para partidos de eliminación directa (Champions/Libertadores), click para ver score agregado de ida + vuelta
 
-## Supported Leagues
+## Supported Leagues (football-data.org)
 
-### Argentina
-- Liga Profesional
-- Copa Argentina
-- Copa de la Liga
-
-### Internacional
+### International
+- UEFA Champions League
 - Copa Libertadores
 - Copa Sudamericana
-- Champions League
-- Copa Intercontinental
-- Europa League
-- Conference League
-- Mundial de Clubes
 
-### Inglaterra
+### England
 - Premier League
-- Carabao Cup
 - FA Cup
+- EFL Cup
 
-### España
-- La Liga
+### Spain
+- LaLiga
 - Copa del Rey
-- Supercopa
+- Supercopa de España
 
-### Italia
+### Italy
 - Serie A
 - Coppa Italia
-- Supercopa
 
-### Alemania
+### Germany
 - Bundesliga
 - DFB-Pokal
 
-## API Endpoints (SportSRC)
+**Note**: football-data.org free tier does NOT include Argentine leagues.
 
-- Partidos del día: `GET https://api.sportsrc.org/?type=matches&sport=football&date={YYYY-MM-DD}`
-- Partidos en vivo: `GET https://api.sportsrc.org/?type=matches&sport=football&status=inprogress&date={YYYY-MM-DD}`
+## API Configuration
+
+### Environment Variables
+Create `.env` file (DO NOT commit):
+```
+VITE_FOOTBALL_DATA_API_KEY=your_api_key_here
+```
+
+Template available in `.env.example`.
+
+### API Endpoints (football-data.org)
+
+- Matches: `GET /matches?dateFrom={YYYY-MM-DD}&dateTo={YYYY-MM-DD}`
+- Competition matches: `GET /competitions/{id}/matches`
+- Single match: `GET /matches/{id}`
+
+### Vite Proxy Configuration
+Located in `vite.config.js`:
+```javascript
+server: {
+  proxy: {
+    '/api/football-data': {
+      target: 'https://api.football-data.org',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api\/football-data/, '/v4'),
+    },
+  },
+}
+```
+
+This proxy solves CORS issues for development.
 
 ## Rules & Conventions
 
 ### State Management
 - Usar Zustand para estado global
 - Partidos en cache localStorage (key: `fc_matches_{date}`)
-- Estado de ligas seleccionadas en localStorage (key: `fc_selected_leagues`)
+- Estado de ligas seleccionadas en localStorage (persistido por Zustand)
 
 ### API Calls
 - NUNCA usar axios (vulnerabilidades recientes)
@@ -95,6 +129,34 @@ src/
 - Props claras con default values
 - Memoización donde corresponda (useMemo, useCallback)
 - Loading states y error states
+
+### Aggregate Score (Ver Global)
+- Solo se muestra para partidos de eliminación directa (ROUND_OF_16, QUARTER_FINALS, SEMI_FINALS, FINAL)
+- Busca el partido de ida en los 15 días anteriores usando `/competitions/{id}/matches`
+- Maneja equipos que cambian localía (swap de scores)
+- Click lazy: solo hace la llamada a la API cuando el usuario hace click
+
+## Git Workflow
+
+- Commits use conventional format (e.g., `feat:`, `fix:`, `refactor:`)
+- API keys stored in `.env` (never committed)
+- `.env` and `.env.local` in `.gitignore`
+- `.env.example` template is committed
+
+## Commands
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+
+## Dependencies
+
+- react: ^18.x
+- vite: ^5.x
+- tailwindcss: ^3.x
+- zustand: ^4.x
+- autoprefixer (dev)
+- postcss (dev)
 
 ## Skills Registry
 
@@ -118,9 +180,3 @@ None yet.
 - **Engram**: Primary persistence backend for SDD artifacts
 - **Openspec**: File-based artifacts available if needed
 - **Mode**: `engram` (default)
-
-## Commands
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
