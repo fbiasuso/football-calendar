@@ -118,9 +118,9 @@ export async function findFirstLegMatch(match) {
   const dateStr = formatDate(prevDate);
   
   try {
-    // Fetch matches from last 15 days - without competition filter first
-    // Then filter by competition locally
-    const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}`);
+    // Fetch matches from last 15 days with season filter
+    const seasonIdParam = seasonId ? `&seasonIds=${seasonId}` : '';
+    const data = await fetchWithRetry(`/matches?dateFrom=${dateStr}&dateTo=${formatDate(matchDate)}${seasonIdParam}`);
     
     // Find the first leg: same teams in same competition, earlier date
     const firstLeg = (data.matches || []).find(m => {
