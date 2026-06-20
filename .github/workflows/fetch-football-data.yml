@@ -1,0 +1,43 @@
+name: fetch-football-data
+
+on:
+  schedule:
+    # UTC: */30 11-23 = 8AM-8PM ART (UTC-3)
+    # UTC: */30 0-4 = 9PM-1AM ART
+    # Ambas cubren la ventana activa 8AM-1AM ART
+    - cron: '*/30 11-23,0-4 * * *'
+    # Un intento extra a las 6AM ART (9 UTC) para agenda del día
+    - cron: '0 9 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Run data fetch
+        run: node scripts/fetch-data.js
+        env:
+          VITE_API_FOOTBALL_API_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+
+      - name: Commit and push if changed
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "football-calendar-bot"
+            git config user.email "bot@football-calendar-bot@users.noreply.github.com"
+            git add -A
+            git commit -m "data: update $(date +'%Y-%m-%d %H:%M')"
+            git push origin gh-pages
+          else
+            echo "No changes — skipping commit"
+          fi
