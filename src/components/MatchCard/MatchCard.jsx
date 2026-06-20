@@ -3,11 +3,8 @@ import { useState } from 'react';
 import { formatTime } from '../../utils/dateUtils.js';
 import { getMatchById, findFirstLegMatch } from '../../api/adapter.js';
 
-// Knockout stages that have two-legged ties
-const KNOCKOUT_STAGES = ['ROUND_OF_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'];
-
 export default function MatchCard({ match }) {
-  const { teams, status, league, date, score, stage, matchday, leagueId, season } = match;
+  const { teams, status, league, date, score, isKnockout, round } = match;
   const [aggregateScore, setAggregateScore] = useState(null);
   const [loadingAggregate, setLoadingAggregate] = useState(false);
   
@@ -22,8 +19,8 @@ export default function MatchCard({ match }) {
   
   const showScore = score?.home != null && score?.away != null;
   
-  // Only show "Ver Global" for knockout stages (not group stages)
-  const isKnockoutMatch = KNOCKOUT_STAGES.includes(stage) && status === 'finished';
+  // Only show "Ver Global" for finished knockout matches
+  const isKnockoutMatch = isKnockout && status === 'finished';
   
   const handleShowAggregate = async () => {
     if (aggregateScore !== null) {
@@ -33,17 +30,11 @@ export default function MatchCard({ match }) {
     
     setLoadingAggregate(true);
     try {
-      // Get current match details
+      // Get current match details (returns normalized Match)
       const matchDetails = await getMatchById(match.id);
       
-      // Try to find the first leg - pass current match team order too
-      const firstLegScore = await findFirstLegMatch({
-        homeTeam: { id: matchDetails.homeTeam?.id },
-        awayTeam: { id: matchDetails.awayTeam?.id },
-        competition: { id: matchDetails.competition?.id },
-        season: { id: matchDetails.season?.id },
-        utcDate: matchDetails.utcDate,
-      });
+      // Pass the Match object directly to findFirstLegMatch
+      const firstLegScore = await findFirstLegMatch(matchDetails);
       
       // Calculate aggregate: first leg + current leg
       if (firstLegScore) {
@@ -51,8 +42,6 @@ export default function MatchCard({ match }) {
           home: firstLegScore.home + (score?.home ?? 0),
           away: firstLegScore.away + (score?.away ?? 0),
         });
-      } else {
-        console.log('First leg not found');
       }
     } catch (error) {
       console.error('Error fetching aggregate:', error);
@@ -68,7 +57,7 @@ export default function MatchCard({ match }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
       <div className="text-xs font-medium text-gray-500 mb-2">
-        {league} {matchday && `#${matchday}`}
+        {league}{round && ` — ${round}`}
       </div>
       
       <div className="flex items-center justify-between gap-2">

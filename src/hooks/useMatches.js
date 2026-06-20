@@ -4,7 +4,7 @@ import useAppStore from '../store/useAppStore.js';
 import { getDateKey } from '../utils/dateUtils.js';
 
 const CACHE_PREFIX = 'fc_matches_';
-const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes
+const CACHE_EXPIRY = 60 * 60 * 1000; // 60 minutes (API-Football has 100 req/day limit)
 
 /**
  * Get cache key for a date
@@ -97,7 +97,11 @@ export function useMatches() {
       // Cache the results if we have matches
       const storeMatches = useAppStore.getState().matches;
       if (storeMatches.length > 0) {
-        setCachedMatches(selectedDate, storeMatches);
+        // Don't cache dates with live matches — prevents stale live data
+        const hasLiveMatch = storeMatches.some(m => m.status === 'live');
+        if (!hasLiveMatch) {
+          setCachedMatches(selectedDate, storeMatches);
+        }
       }
     } catch (error) {
       console.error('Error loading matches:', error);

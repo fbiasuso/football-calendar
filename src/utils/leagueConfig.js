@@ -1,7 +1,28 @@
 // League configuration for Football Calendar
-// Using football-data.org API
+
+// API-Football league IDs for each league name
+export const API_FOOTBALL_LEAGUE_IDS = {
+  'World Cup 2026': 1,
+  'UEFA Champions League': 2,
+  'Copa Libertadores': 13,
+  'Copa Sudamericana': 11,
+  'Premier League': 39,
+  'FA Cup': 45,
+  'EFL Cup': 48,
+  'LaLiga': 140,
+  'Copa del Rey': 143,
+  'Supercopa': 556,
+  'Serie A': 135,
+  'Coppa Italia': 137,
+  'Bundesliga': 78,
+  'DFB-Pokal': 81,
+};
 
 export const LEAGUE_GROUPS = {
+  mundial: {
+    name: 'Mundial',
+    leagues: ['World Cup 2026'],
+  },
   champions: {
     name: 'Champions League',
     leagues: ['UEFA Champions League'],
@@ -32,8 +53,9 @@ export const LEAGUE_GROUPS = {
   },
 };
 
-// Default selected leagues (football-data.org)
+// Default selected leagues
 export const DEFAULT_SELECTED_LEAGUES = [
+  'World Cup 2026',
   'UEFA Champions League',
   'Copa Libertadores',
   'Argentine Liga Profesional',

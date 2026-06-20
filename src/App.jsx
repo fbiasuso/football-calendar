@@ -1,14 +1,16 @@
 // Football Calendar App
 import { useMatches } from './hooks/useMatches.js';
 import useAppStore from './store/useAppStore.js';
+import NavBar from './components/NavBar/NavBar.jsx';
 import MatchList from './components/MatchList/MatchList.jsx';
 import LeagueFilter from './components/LeagueFilter/LeagueFilter.jsx';
 import DateNav from './components/DateNav/DateNav.jsx';
 import SortControl from './components/SortControl/SortControl.jsx';
+import WorldCupPage from './pages/WorldCupPage/WorldCupPage.jsx';
 
 function App() {
   const { matches, isLoading, error, refresh } = useMatches();
-  const { error: storeError, autoPollingEnabled, setAutoPolling } = useAppStore();
+  const { error: storeError, autoPollingEnabled, setAutoPolling, currentView } = useAppStore();
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,57 +58,66 @@ function App() {
             </div>
           </div>
         </div>
+        
+        {/* Navigation tabs */}
+        <NavBar />
       </header>
       
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar - League filters */}
-          <aside className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-24">
-              <h2 className="font-semibold text-gray-800 mb-4">
-                Filtrar ligas
-              </h2>
-              <LeagueFilter />
-            </div>
-          </aside>
-          
-          {/* Main content area */}
-          <div className="flex-1">
-            {/* Date navigation and sort control */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <DateNav />
-              <SortControl />
-            </div>
-            
-            {/* Error state */}
-            {(error || storeError) && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                <p className="text-red-700 text-sm">
-                  {error || storeError}
-                </p>
-                <button
-                  onClick={refresh}
-                  className="text-red-600 text-sm underline mt-1"
-                >
-                  Intentar de nuevo
-                </button>
+        {currentView === 'matches' && (
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Sidebar - League filters */}
+            <aside className="lg:w-64 flex-shrink-0">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-24">
+                <h2 className="font-semibold text-gray-800 mb-4">
+                  Filtrar ligas
+                </h2>
+                <LeagueFilter />
               </div>
-            )}
+            </aside>
             
-            {/* Loading state */}
-            {isLoading && matches.length === 0 && (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            {/* Main content area */}
+            <div className="flex-1">
+              {/* Date navigation and sort control */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <DateNav />
+                <SortControl />
               </div>
-            )}
-            
-            {/* Match list */}
-            {!isLoading && (
-              <MatchList matches={matches} />
-            )}
+              
+              {/* Error state */}
+              {(error || storeError) && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-red-700 text-sm">
+                    {error || storeError}
+                  </p>
+                  <button
+                    onClick={refresh}
+                    className="text-red-600 text-sm underline mt-1"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
+              )}
+              
+              {/* Loading state */}
+              {isLoading && matches.length === 0 && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              )}
+              
+              {/* Match list */}
+              {!isLoading && (
+                <MatchList matches={matches} />
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {currentView === 'worldcup' && (
+          <WorldCupPage />
+        )}
       </main>
     </div>
   );

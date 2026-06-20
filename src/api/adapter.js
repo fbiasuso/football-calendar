@@ -1,24 +1,30 @@
 // API Adapter Interface for Football Calendar
-// Using football-data.org API (has scores!)
+// Using API-Football (api-sports.io v3)
 
 /**
  * @typedef {Object} Match
  * @property {string} id
  * @property {string} title
- * @property {number} date - Unix timestamp
- * @property {string} league
+ * @property {number} date          - Unix timestamp ms
+ * @property {string} league        - Display name (e.g. "Premier League")
+ * @property {number} leagueId      - API-Football league ID
  * @property {Object} teams
  * @property {Object} teams.home
  * @property {string} teams.home.name
  * @property {string} teams.home.badge
+ * @property {number} teams.home.id
  * @property {Object} teams.away
  * @property {string} teams.away.name
  * @property {string} teams.away.badge
- * @property {string} status - 'pending' | 'live' | 'finished'
- * @property {Object} [score]
- * @property {number} [score.home]
- * @property {number} [score.away]
- * @property {number} [minute]
+ * @property {number} teams.away.id
+ * @property {'pending'|'live'|'finished'} status
+ * @property {Object} score
+ * @property {number|null} score.home
+ * @property {number|null} score.away
+ * @property {number|null} minute
+ * @property {string|null} round     - e.g. "Regular Season - 28", "Round of 16"
+ * @property {boolean} isKnockout    - true when round contains knockout keywords
+ * @property {number|null} season    - e.g. 2024
  */
 
 /**
@@ -27,8 +33,8 @@
  * @returns {Promise<Match[]>}
  */
 export async function getMatches(date) {
-  const { footballDataClient } = await import('./footballData.js');
-  return footballDataClient.getMatches(date);
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.getMatches(date);
 }
 
 /**
@@ -37,17 +43,17 @@ export async function getMatches(date) {
  * @returns {Promise<Match[]>}
  */
 export async function getLiveMatches(date) {
-  const { footballDataClient } = await import('./footballData.js');
-  return footballDataClient.getLiveMatches(date);
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.getLiveMatches(date);
 }
 
 /**
  * Get available leagues
- * @returns {Promise<Array<{id: string, name: string}[]>}
+ * @returns {Promise<Array<{id: string, name: string}>>}
  */
 export async function getLeagues() {
-  const { footballDataClient } = await import('./footballData.js');
-  return footballDataClient.getCompetitions();
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.getCompetitions();
 }
 
 /**
@@ -56,8 +62,8 @@ export async function getLeagues() {
  * @returns {Promise<Match>}
  */
 export async function getMatchById(matchId) {
-  const { footballDataClient } = await import('./footballData.js');
-  return footballDataClient.getMatchById(matchId);
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.getMatchById(matchId);
 }
 
 /**
@@ -66,6 +72,28 @@ export async function getMatchById(matchId) {
  * @returns {Promise<{home: number, away: number}|null>}
  */
 export async function findFirstLegMatch(match) {
-  const { footballDataClient } = await import('./footballData.js');
-  return footballDataClient.findFirstLegMatch(match);
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.findFirstLegMatch(match);
+}
+
+/**
+ * Get standings for a league and season
+ * @param {number} leagueId - API-Football league ID
+ * @param {number} season - Season year
+ * @returns {Promise<Array<{group: string, teams: Array}>>}
+ */
+export async function getStandings(leagueId, season) {
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.getStandings(leagueId, season);
+}
+
+/**
+ * Get fixture rounds for a league and season
+ * @param {number} leagueId - API-Football league ID
+ * @param {number} season - Season year
+ * @returns {Promise<string[]>}
+ */
+export async function getRounds(leagueId, season) {
+  const { apiFootballClient } = await import('./apiFootball.js');
+  return apiFootballClient.getRounds(leagueId, season);
 }
