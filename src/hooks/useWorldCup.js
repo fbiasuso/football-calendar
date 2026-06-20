@@ -1,8 +1,8 @@
 // useWorldCup hook - Fetch and cache World Cup standings/rounds
 import { useEffect, useCallback, useRef, useState } from 'react';
 import useAppStore from '../store/useAppStore.js';
-// Importar directamente para evitar problemas con el lazy import del adapter
-import { getStandings, getRounds } from '../api/apiFootball.js';
+// Usar el adapter (static-first con fallback a API real)
+import { getStandings, getRounds } from '../api/adapter.js';
 
 const STALE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 const LEAGUE_ID = 1; // API-Football World Cup league ID
