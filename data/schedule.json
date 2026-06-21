@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-21T01:34:14.349Z",
+  "generatedAt": "2026-06-21T01:47:29.774Z",
   "today": "2026-06-21",
   "tomorrow": "2026-06-22",
-  "totalFixtures": 8,
+  "totalFixtures": 12,
   "liveCount": 1,
   "pendingCount": 7,
-  "finishedCount": 0,
+  "finishedCount": 4,
   "mode": "worldcup"
 }

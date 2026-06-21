@@ -1,0 +1,126 @@
+[
+  {
+    "id": "1489389",
+    "title": "Brazil vs Haiti",
+    "date": 1781915400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Brazil",
+        "badge": "https://media.api-sports.io/football/teams/6.png",
+        "id": 6
+      },
+      "away": {
+        "name": "Haiti",
+        "badge": "https://media.api-sports.io/football/teams/2386.png",
+        "id": 2386
+      }
+    },
+    "status": "finished",
+    "score": {
+      "home": 3,
+      "away": 0
+    },
+    "minute": 90,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1539006",
+    "title": "Türkiye vs Paraguay",
+    "date": 1781924400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Türkiye",
+        "badge": "https://media.api-sports.io/football/teams/777.png",
+        "id": 777
+      },
+      "away": {
+        "name": "Paraguay",
+        "badge": "https://media.api-sports.io/football/teams/2380.png",
+        "id": 2380
+      }
+    },
+    "status": "finished",
+    "score": {
+      "home": 0,
+      "away": 1
+    },
+    "minute": 90,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1539007",
+    "title": "Netherlands vs Sweden",
+    "date": 1781974800000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Netherlands",
+        "badge": "https://media.api-sports.io/football/teams/1118.png",
+        "id": 1118
+      },
+      "away": {
+        "name": "Sweden",
+        "badge": "https://media.api-sports.io/football/teams/5.png",
+        "id": 5
+      }
+    },
+    "status": "finished",
+    "score": {
+      "home": 5,
+      "away": 1
+    },
+    "minute": 90,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489393",
+    "title": "Germany vs Ivory Coast",
+    "date": 1781985600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Germany",
+        "badge": "https://media.api-sports.io/football/teams/25.png",
+        "id": 25
+      },
+      "away": {
+        "name": "Ivory Coast",
+        "badge": "https://media.api-sports.io/football/teams/1501.png",
+        "id": 1501
+      }
+    },
+    "status": "finished",
+    "score": {
+      "home": 2,
+      "away": 1
+    },
+    "minute": 90,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  }
+]
