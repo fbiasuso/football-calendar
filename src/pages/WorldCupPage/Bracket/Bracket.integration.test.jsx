@@ -658,17 +658,18 @@ describe('Bracket — progressive unlock with slots', () => {
     return slots;
   }
 
-  it('should keep R32 active when no slots are assigned (even with full picks)', () => {
+  it('should complete R32 with full picks even without slot assignments', () => {
     mockStore.bracketMode = 'editing';
     mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
-    mockStore.wcSlots = {}; // No slots
+    mockStore.wcSlots = {}; // No slots — slots optional
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // R32 header should show active (not completed) because slots are missing
+    // R32 completed, R16 active (slots not required for progression)
     const r32Header = screen.getByText(/^Dieciseisavos/);
-    expect(r32Header.closest('[data-round-state="active"]')).toBeInTheDocument();
-    expect(r32Header.closest('[data-round-state="completed"]')).toBeNull();
+    const r16Header = screen.getByText(/^Octavos/);
+    expect(r32Header.closest('[data-round-state="completed"]')).toBeInTheDocument();
+    expect(r16Header.closest('[data-round-state="active"]')).toBeInTheDocument();
   });
 
   it('should unlock R16 when 32 slots + 16 R32 picks are done', () => {

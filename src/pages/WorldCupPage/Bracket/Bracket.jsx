@@ -22,27 +22,15 @@ export function computeRoundStates(wcPicks, graph, wcSlots) {
     roundNodes[node.round].push(id);
   }
 
-  // Build the 32 R32 slot IDs
-  const r32SlotIds = roundNodes['R32'].flatMap((id) => [`${id}-home`, `${id}-away`]);
-
-  // Check if all 32 slots are assigned
-  const all32SlotsFilled = wcSlots && r32SlotIds.every(
-    (slotId) => slotId in wcSlots && wcSlots[slotId] != null
-  );
-
   const states = {};
   let foundActive = false;
 
   for (const round of rounds) {
     const nodes = roundNodes[round];
 
-    let allPicked;
-    if (round === 'R32') {
-      // R32 requires both: all 32 slots filled + all 16 picks made
-      allPicked = all32SlotsFilled && nodes.every((id) => id in wcPicks);
-    } else {
-      allPicked = nodes.every((id) => id in wcPicks);
-    }
+    // All rounds: require every matchup to have a winner pick
+    // Slots are optional — standings fallback provides teams
+    const allPicked = nodes.every((id) => wcPicks[id] != null);
 
     if (foundActive) {
       states[round] = 'locked';
@@ -193,7 +181,7 @@ function SlotPoolSelector({
           {slotTeam.logo && (
             <img src={slotTeam.logo} alt="" className="w-10 h-10 flex-shrink-0" onError={(e) => { e.target.style.display = 'none'; }} />
           )}
-          <span className="text-sm font-semibold text-blue-800 text-center truncate w-full">
+          <span className="text-sm font-semibold text-blue-800 text-center truncate w-full" title={slotTeam.name}>
             {slotTeam.name}
           </span>
           <span className="text-blue-600 text-xs">✓</span>
@@ -230,7 +218,7 @@ function SlotPoolSelector({
               {team.logo && (
                 <img src={team.logo} alt="" className="w-5 h-5 flex-shrink-0" onError={(e) => { e.target.style.display = 'none'; }} />
               )}
-              <span className={`truncate flex-1 ${isSelected ? 'font-semibold text-blue-800' : 'text-gray-700'}`}>
+              <span className={`truncate flex-1 ${isSelected ? 'font-semibold text-blue-800' : 'text-gray-700'}`} title={team.name}>
                 {team.name}
               </span>
               {isSelected && (
@@ -819,38 +807,42 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           {/* Step: Teams assignment */}
           {!showWinnerStep && (
             <>
-              <div className="flex gap-4">
-                <SlotPoolSelector
-                  matchupId={m.id}
-                  side="home"
-                  standings={standings}
-                  slotTeam={homeSlotTeam}
-                  onPick={handleSlotAssign}
-                  onChangeTeam={handleChangeTeam}
-                  isThirdSide={false}
-                  candidateGroups={null}
-                  isExpanded={hasHome}
-                />
+              <div className="flex justify-center items-start gap-4">
+                <div className="w-36 flex-shrink-0">
+                  <SlotPoolSelector
+                    matchupId={m.id}
+                    side="home"
+                    standings={standings}
+                    slotTeam={homeSlotTeam}
+                    onPick={handleSlotAssign}
+                    onChangeTeam={handleChangeTeam}
+                    isThirdSide={false}
+                    candidateGroups={null}
+                    isExpanded={hasHome}
+                  />
+                </div>
 
                 {/* VS divider */}
-                <div className="flex flex-col items-center justify-center flex-shrink-0 w-8">
+                <div className="flex flex-col items-center justify-center flex-shrink-0 w-8 pt-8">
                   <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
                   {m.isSimulated && (
                     <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded mt-1">SIM</span>
                   )}
                 </div>
 
-                <SlotPoolSelector
-                  matchupId={m.id}
-                  side="away"
-                  standings={standings}
-                  slotTeam={awaySlotTeam}
-                  onPick={handleSlotAssign}
-                  onChangeTeam={handleChangeTeam}
-                  isThirdSide={isThird}
-                  candidateGroups={isThird ? awayCandidates : null}
-                  isExpanded={hasAway}
-                />
+                <div className="w-36 flex-shrink-0">
+                  <SlotPoolSelector
+                    matchupId={m.id}
+                    side="away"
+                    standings={standings}
+                    slotTeam={awaySlotTeam}
+                    onPick={handleSlotAssign}
+                    onChangeTeam={handleChangeTeam}
+                    isThirdSide={isThird}
+                    candidateGroups={isThird ? awayCandidates : null}
+                    isExpanded={hasAway}
+                  />
+                </div>
               </div>
 
               {/* Footer: teams step */}
@@ -876,7 +868,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     {homeSlotTeam?.logo && (
                       <img src={homeSlotTeam.logo} alt="" className="w-10 h-10" onError={(e) => { e.target.style.display = 'none'; }} />
                     )}
-                    <span className="text-sm font-semibold text-gray-900 truncate w-full text-center">
+                    <span className="text-sm font-semibold text-gray-900 truncate w-full text-center" title={homeSlotTeam?.name}>
                       {homeSlotTeam?.name}
                     </span>
                   </div>
@@ -904,7 +896,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     {awaySlotTeam?.logo && (
                       <img src={awaySlotTeam.logo} alt="" className="w-10 h-10" onError={(e) => { e.target.style.display = 'none'; }} />
                     )}
-                    <span className="text-sm font-semibold text-gray-900 truncate w-full text-center">
+                    <span className="text-sm font-semibold text-gray-900 truncate w-full text-center" title={awaySlotTeam?.name}>
                       {awaySlotTeam?.name}
                     </span>
                   </div>

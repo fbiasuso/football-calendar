@@ -28,16 +28,16 @@ describe('computeRoundStates', () => {
     });
   });
 
-  it('should return R32 active when picks exist but no slots (progressive unlock)', () => {
+  it('should complete R32 and unlock R16 when all R32 picks exist (slots optional)', () => {
     const r32Ids = Object.entries(TOURNAMENT_GRAPH)
       .filter(([, node]) => node.round === 'R32')
       .map(([id]) => id);
     const picks = Object.fromEntries(r32Ids.map((id) => [id, 'home']));
 
-    // Full picks but no slots → R32 should stay active (slots required)
+    // Full picks, no slots → R32 completed, R16 active (slots not required)
     const states = computeRoundStates(picks, TOURNAMENT_GRAPH, {});
-    expect(states.R32).toBe('active');
-    expect(states.R16).toBe('locked');
+    expect(states.R32).toBe('completed');
+    expect(states.R16).toBe('active');
   });
 
   it('should return R32 completed and R16 active when all slots and R32 picks are done', () => {
@@ -95,19 +95,19 @@ describe('computeRoundStates', () => {
     });
   });
 
-  it('should return R32 active when only partial slots exist (15 + 16 picks)', () => {
+  it('should complete R32 with full picks even with partial slots', () => {
     const r32Ids = Object.entries(TOURNAMENT_GRAPH)
       .filter(([, node]) => node.round === 'R32')
       .map(([id]) => id);
     const picks = Object.fromEntries(r32Ids.map((id) => [id, 'home']));
 
-    // Only 31 out of 32 slots filled (missing first slot)
+    // Only 31 out of 32 slots filled — slots not required, R32 completes
     const slots = makeFullSlots();
     delete slots['M73-home'];
 
     const states = computeRoundStates(picks, TOURNAMENT_GRAPH, slots);
-    expect(states.R32).toBe('active');
-    expect(states.R16).toBe('locked');
+    expect(states.R32).toBe('completed');
+    expect(states.R16).toBe('active');
   });
 
   it('should return R32 active with partial R32 picks even with full slots', () => {
