@@ -14,9 +14,26 @@ function App() {
   const { matches, isLoading, error, refresh, hasLiveMatches } = useMatches();
   const { error: storeError, autoPollingEnabled, setAutoPolling, currentView, lastUpdated } = useAppStore();
   const [fetchPaused, setFetchPaused] = useState(false);
+  const [isStaticMode, setIsStaticMode] = useState(null); // null=loading, true, false
+  const [staticLastFetched, setStaticLastFetched] = useState(null);
   const [clockTick, setClockTick] = useState(0);
 
+  // Detect static mode (gh-pages) vs live API (dev)
   useEffect(() => {
+    const metaUrl = `${import.meta.env.BASE_URL}data/meta.json`;
+    fetch(metaUrl)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.lastFetched) {
+          setIsStaticMode(true);
+          setStaticLastFetched(d.lastFetched);
+        } else {
+          setIsStaticMode(false);
+        }
+      })
+      .catch(() => setIsStaticMode(false));
+
+    // Also check fetchPaused from status.json
     fetch('/data/status.json')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -31,7 +48,8 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
-  const relativeTime = useMemo(() => formatRelativeTime(lastUpdated), [lastUpdated, clockTick]);
+  const effectiveLastUpdated = isStaticMode ? staticLastFetched : lastUpdated;
+  const relativeTime = useMemo(() => formatRelativeTime(effectiveLastUpdated), [effectiveLastUpdated, clockTick]);
 
   const hasMatchInLast5 = useMemo(() => {
     const fiveMinAgo = Date.now() - 5 * 60 * 1000;
@@ -48,67 +66,75 @@ function App() {
               ⚽ Football Calendar
             </h1>
             
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              {/* Auto-polling toggle — 3 estados: OFF / ON activo / ON dormido */}
-              <button
-                onClick={() => !fetchPaused && setAutoPolling(!autoPollingEnabled)}
-                disabled={fetchPaused}
-                title={
-                  fetchPaused
-                    ? 'Actualizaciones desactivadas'
-                    : autoPollingEnabled
-                      ? hasLiveMatches
-                        ? `Auto-actualización cada ${hasMatchInLast5 ? '1' : '5'} min`
-                        : 'Esperando partidos en vivo...'
-                      : 'Activar actualización automática'
-                }
-                className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  autoPollingEnabled
-                    ? hasLiveMatches
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                    : 'hover:bg-gray-100 text-gray-600'
-                }`}
-                aria-label={autoPollingEnabled ? 'Auto-actualizar ON' : 'Auto-actualizar OFF'}
-              >
-                <div className="flex items-center gap-1">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {autoPollingEnabled && hasLiveMatches && (
-                    <span className="text-[9px] font-bold">{hasMatchInLast5 ? '1' : '5'}min</span>
-                  )}
-                </div>
-              </button>
-
-              {/* Refresh button */}
-              <button
-                onClick={refresh}
-                disabled={isLoading || fetchPaused}
-                title={fetchPaused ? 'Actualizaciones desactivadas' : 'Refrescar partidos'}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Refrescar"
-              >
-                <svg 
-                  className={`w-5 h-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </button>
-              
-              {fetchPaused && (
-                <span className="text-xs font-medium text-red-600 ml-1 select-none">
-                  Actualizaciones desactivadas
+            {/* Actions — modo estático (gh-pages) vs live (dev) */}
+            {isStaticMode ? (
+              <div className="text-right">
+                <span className="text-[11px] text-gray-500 font-medium">
+                  Modo estático: datos cada 30 min
                 </span>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {/* Auto-polling toggle — 3 estados: OFF / ON activo / ON dormido */}
+                <button
+                  onClick={() => !fetchPaused && setAutoPolling(!autoPollingEnabled)}
+                  disabled={fetchPaused}
+                  title={
+                    fetchPaused
+                      ? 'Actualizaciones desactivadas'
+                      : autoPollingEnabled
+                        ? hasLiveMatches
+                          ? `Auto-actualización cada ${hasMatchInLast5 ? '1' : '5'} min`
+                          : 'Esperando partidos en vivo...'
+                        : 'Activar actualización automática'
+                  }
+                  className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    autoPollingEnabled
+                      ? hasLiveMatches
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-amber-100 text-amber-700'
+                      : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                  aria-label={autoPollingEnabled ? 'Auto-actualizar ON' : 'Auto-actualizar OFF'}
+                >
+                  <div className="flex items-center gap-1">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {autoPollingEnabled && hasLiveMatches && (
+                      <span className="text-[9px] font-bold">{hasMatchInLast5 ? '1' : '5'}min</span>
+                    )}
+                  </div>
+                </button>
+
+                {/* Refresh button */}
+                <button
+                  onClick={refresh}
+                  disabled={isLoading || fetchPaused}
+                  title={fetchPaused ? 'Actualizaciones desactivadas' : 'Refrescar partidos'}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Refrescar"
+                >
+                  <svg 
+                    className={`w-5 h-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+                
+                {fetchPaused && (
+                  <span className="text-xs font-medium text-red-600 ml-1 select-none">
+                    Actualizaciones desactivadas
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* lastUpdated indicator */}
-            {lastUpdated && (
+            {effectiveLastUpdated && (
               <div className="flex justify-end mt-1">
                 <span className="text-[10px] text-gray-400">
                   Última actualización: {relativeTime}
