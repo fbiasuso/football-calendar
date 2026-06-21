@@ -162,6 +162,7 @@ describe('Bracket — team display', () => {
 
 describe('Bracket — pick controls', () => {
   it('should show "Resetear picks" button disabled when no picks', () => {
+    mockStore.bracketMode = 'editing';
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
@@ -171,6 +172,7 @@ describe('Bracket — pick controls', () => {
   });
 
   it('should show "Resetear picks" button enabled when picks exist', () => {
+    mockStore.bracketMode = 'editing';
     mockStore.wcPicks = { 'M73': 'home' };
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
@@ -180,6 +182,7 @@ describe('Bracket — pick controls', () => {
   });
 
   it('should display pick count when picks are active', () => {
+    mockStore.bracketMode = 'editing';
     mockStore.wcPicks = { 'M73': 'home', 'M75': 'away' };
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
@@ -188,6 +191,7 @@ describe('Bracket — pick controls', () => {
   });
 
   it('should call clearWcPicks when "Resetear picks" is clicked', () => {
+    mockStore.bracketMode = 'editing';
     mockStore.wcPicks = { 'M73': 'home' };
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
@@ -265,6 +269,9 @@ describe('Bracket — editing mode', () => {
     const toggleBtn = screen.getByText('Simular cruces');
     expect(toggleBtn).toBeInTheDocument();
 
+    // In locked mode the button should be green (CTA)
+    expect(toggleBtn.className).toContain('bg-green-600');
+
     // Simulate clicking the toggle (the mock just tracks calls)
     fireEvent.click(toggleBtn);
     expect(mockStore.setBracketMode).toHaveBeenCalledWith('editing');
@@ -275,8 +282,10 @@ describe('Bracket — editing mode', () => {
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // In editing mode, the toggle should show "Volver a Cruces Reales"
-    expect(screen.getByText('Volver a Cruces Reales')).toBeInTheDocument();
+    // In editing mode, the toggle should show "Volver a Cruces Reales" (secondary style)
+    const btn = screen.getByText('Volver a Cruces Reales');
+    expect(btn).toBeInTheDocument();
+    expect(btn.className).toContain('border');
   });
 });
 

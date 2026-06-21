@@ -63,9 +63,7 @@ function parseLabel(label) {
 
 /** Convert rank+group to source description */
 function rankToSource(rank, group) {
-  if (rank === 1) return `Ganador del grupo ${group}`;
-  if (rank === 2) return `Subcampeón del grupo ${group}`;
-  return `3° del grupo ${group}`;
+  return `${rank}° del grupo ${group}`;
 }
 
 /**
@@ -144,6 +142,7 @@ function SlotPoolSelector({
   isThirdSide,
   candidateGroups,
   isExpanded = false,
+  rank,
 }) {
   const cfg = getR32Config(matchupId);
 
@@ -234,35 +233,33 @@ function SlotPoolSelector({
         )}
       </div>
 
-      {/* Group indicator - for third-place cycling (only when NOT expanded) */}
-      {isThirdSide && candidateGroups && (
-        <div className="flex items-center justify-center gap-2 mt-2">
-          <button
-            onClick={handlePrev}
-            className="text-gray-400 hover:text-gray-600 text-sm leading-none px-1 py-0.5"
-            aria-label="Grupo anterior"
-          >
-            ◀
-          </button>
-          <span className="text-[10px] font-medium text-gray-500 uppercase">
-            Grupo {effectiveGroup} <span className="text-gray-400 font-normal">({currentGroupIdx + 1}/{totalGroups})</span>
-          </span>
-          <button
-            onClick={handleNext}
-            className="text-gray-400 hover:text-gray-600 text-sm leading-none px-1 py-0.5"
-            aria-label="Grupo siguiente"
-          >
-            ▶
-          </button>
-        </div>
-      )}
-
-      {/* Static group indicator for fixed */}
-      {!isThirdSide && effectiveGroup && (
+      {/* Group indicator using rank-based label */}
+      {rank && effectiveGroup && (
         <div className="mt-2 text-center">
-          <span className="text-[10px] font-medium text-gray-500 uppercase">
-            Grupo {effectiveGroup}
+          <span className="text-[10px] font-medium text-gray-500">
+            {rank}° del grupo {effectiveGroup}
           </span>
+          {isThirdSide && candidateGroups && (
+            <div className="flex items-center justify-center gap-2 mt-1">
+              <button
+                onClick={handlePrev}
+                className="text-gray-400 hover:text-gray-600 text-xs leading-none px-1 py-0.5"
+                aria-label="Grupo anterior"
+              >
+                ◀
+              </button>
+              <span className="text-[10px] text-gray-400 font-normal">
+                ({currentGroupIdx + 1}/{totalGroups})
+              </span>
+              <button
+                onClick={handleNext}
+                className="text-gray-400 hover:text-gray-600 text-xs leading-none px-1 py-0.5"
+                aria-label="Grupo siguiente"
+              >
+                ▶
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -721,9 +718,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
             <div className="flex flex-col items-center gap-1 flex-shrink-0">
               <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
-              {m.isSimulated && (
-                <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded">SIMULACIÓN</span>
-              )}
             </div>
 
             <div className="flex flex-col items-center gap-2 text-center flex-1 min-w-0 p-3 rounded-lg border-2 border-gray-100 bg-gray-50">
@@ -827,15 +821,13 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     isThirdSide={false}
                     candidateGroups={null}
                     isExpanded={hasHome}
+                    rank={1}
                   />
                 </div>
 
                 {/* VS divider */}
                 <div className="flex flex-col items-center justify-center flex-shrink-0 w-8 pt-8">
                   <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
-                  {m.isSimulated && (
-                    <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded mt-1">SIM</span>
-                  )}
                 </div>
 
                 <div className="w-36 flex-shrink-0">
@@ -849,6 +841,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     isThirdSide={isThird}
                     candidateGroups={isThird ? awayCandidates : null}
                     isExpanded={hasAway}
+                    rank={isThird ? 3 : 2}
                   />
                 </div>
               </div>
@@ -879,6 +872,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     <span className="text-sm font-semibold text-gray-900 truncate w-full text-center" title={homeSlotTeam?.name}>
                       {homeSlotTeam?.name}
                     </span>
+                    {cfg && <span className="text-[10px] text-gray-400 leading-tight">{rankToSource(1, cfg.homeGroup)}</span>}
                   </div>
                   <button
                     onClick={() => handleChangeTeam(m.id, 'home')}
@@ -890,9 +884,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                   <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
-                  {m.isSimulated && (
-                    <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded mt-1">SIM</span>
-                  )}
                 </div>
 
                 {/* Away team */}
@@ -907,6 +898,10 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     <span className="text-sm font-semibold text-gray-900 truncate w-full text-center" title={awaySlotTeam?.name}>
                       {awaySlotTeam?.name}
                     </span>
+                    {isThird
+                      ? <span className="text-[10px] text-gray-400 leading-tight">3° del grupo {THIRD_PLACE_CANDIDATES[m.id] || ''}</span>
+                      : cfg && <span className="text-[10px] text-gray-400 leading-tight">{rankToSource(2, cfg.awayGroup)}</span>
+                    }
                   </div>
                   <button
                     onClick={() => handleChangeTeam(m.id, 'away')}
@@ -977,26 +972,28 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         <button
           onClick={() => setBracketMode(bracketMode === 'locked' ? 'editing' : 'locked')}
           className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-            bracketMode === 'editing'
+            bracketMode === 'locked'
               ? 'bg-green-600 text-white hover:bg-green-700'
               : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
           }`}
         >
-          {bracketMode === 'editing' ? 'Volver a Cruces Reales' : 'Simular cruces'}
+          {bracketMode === 'locked' ? 'Simular cruces' : 'Volver a Cruces Reales'}
         </button>
-        <button
-          onClick={() => { clearWcPicks(); clearAllWcSlots(); setSelectedMatchup(null); }}
-          disabled={pickCount === 0 && slotCount === 0}
-          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-            pickCount === 0 && slotCount === 0
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          Resetear picks
-        </button>
+        {bracketMode === 'editing' && (
+          <button
+            onClick={() => { clearWcPicks(); clearAllWcSlots(); setSelectedMatchup(null); }}
+            disabled={pickCount === 0 && slotCount === 0}
+            className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              pickCount === 0 && slotCount === 0
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            Resetear picks
+          </button>
+        )}
         {pickCount === 0 && bracketMode === 'locked' && (
-          <span className="text-xs text-gray-500">Cambiá a Editar predicciones para elegir ganadores</span>
+          <span className="text-xs text-gray-500">Hacé click en cualquier cruce para ver los equipos</span>
         )}
         {pickCount === 0 && bracketMode === 'editing' && (
           <span className="text-xs text-gray-500">Hacé click en cualquier cruce de R32 para asignar equipos y elegir ganador</span>

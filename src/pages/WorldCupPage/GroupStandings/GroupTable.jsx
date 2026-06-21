@@ -75,6 +75,9 @@ export default function GroupTable({ group }) {
           </tbody>
         </table>
       </div>
+      <p className="px-3 py-1.5 text-[10px] text-gray-400 text-right border-t border-gray-100">
+        Criterio de grupo: Pts &gt; DG &gt; GF &gt; H2H
+      </p>
     </div>
   );
 }
