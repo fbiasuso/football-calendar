@@ -76,6 +76,30 @@ export function formatTime(timestamp) {
 }
 
 /**
+ * Format a date as relative time string (e.g., "hace 5 min", "hace 2 hs")
+ */
+export function formatRelativeTime(date) {
+  if (!date) return '';
+  
+  const now = Date.now();
+  const diff = now - new Date(date).getTime();
+  
+  if (diff < 0) return 'justo ahora';
+  
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return 'justo ahora';
+  
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} ${hours === 1 ? 'hora' : 'hs'}`;
+  
+  const days = Math.floor(hours / 24);
+  return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
+}
+
+/**
  * Parse date string YYYY-MM-DD to Date object
  */
 export function parseDateKey(dateKey) {

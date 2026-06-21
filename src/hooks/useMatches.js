@@ -26,7 +26,7 @@ function getCachedMatches(date) {
       
       // Check if cache is still valid
       if (Date.now() - timestamp < CACHE_EXPIRY) {
-        return matches;
+        return { matches, timestamp };
       }
     }
   } catch (error) {
@@ -86,7 +86,7 @@ export function useMatches() {
     if (!forceRefresh) {
       const cached = getCachedMatches(selectedDate);
       if (cached) {
-        setMatches(cached);
+        setMatches(cached.matches, cached.timestamp);
         return;
       }
     }
@@ -143,11 +143,14 @@ export function useMatches() {
     loadMatches();
   }, [loadMatches]);
   
+  const hasLiveMatches = matches.some(m => m.status === 'live');
+
   return {
     matches,
     isLoading,
     error,
     refresh,
+    hasLiveMatches,
   };
 }
 

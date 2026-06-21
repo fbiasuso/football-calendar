@@ -33,9 +33,9 @@ const useAppStore = create(
       bracketMode: 'locked', // 'locked' | 'editing'
       
       // Actions
-      setMatches: (matches) => set({ 
+      setMatches: (matches, dataTimestamp) => set({ 
         matches, 
-        lastUpdated: new Date(),
+        lastUpdated: dataTimestamp || new Date(),
         error: null 
       }),
       

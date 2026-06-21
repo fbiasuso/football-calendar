@@ -1,5 +1,5 @@
 // Football Calendar App
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMatches } from './hooks/useMatches.js';
 import useAppStore from './store/useAppStore.js';
 import NavBar from './components/NavBar/NavBar.jsx';
@@ -8,11 +8,13 @@ import LeagueFilter from './components/LeagueFilter/LeagueFilter.jsx';
 import DateNav from './components/DateNav/DateNav.jsx';
 import SortControl from './components/SortControl/SortControl.jsx';
 import WorldCupPage from './pages/WorldCupPage/WorldCupPage.jsx';
+import { formatRelativeTime } from './utils/dateUtils.js';
 
 function App() {
-  const { matches, isLoading, error, refresh } = useMatches();
-  const { error: storeError, autoPollingEnabled, setAutoPolling, currentView } = useAppStore();
+  const { matches, isLoading, error, refresh, hasLiveMatches } = useMatches();
+  const { error: storeError, autoPollingEnabled, setAutoPolling, currentView, lastUpdated } = useAppStore();
   const [fetchPaused, setFetchPaused] = useState(false);
+  const [clockTick, setClockTick] = useState(0);
 
   useEffect(() => {
     fetch('/data/status.json')
@@ -22,6 +24,19 @@ function App() {
       })
       .catch(() => {});
   }, []);
+
+  // Tick each minute so relative time updates
+  useEffect(() => {
+    const id = setInterval(() => setClockTick(t => t + 1), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const relativeTime = useMemo(() => formatRelativeTime(lastUpdated), [lastUpdated, clockTick]);
+
+  const hasMatchInLast5 = useMemo(() => {
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    return matches.some(m => m.status === 'live' && m.date > fiveMinAgo);
+  }, [matches, clockTick]);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -35,11 +50,44 @@ function App() {
             
             {/* Actions */}
             <div className="flex items-center gap-2">
+              {/* Auto-polling toggle — 3 estados: OFF / ON activo / ON dormido */}
+              <button
+                onClick={() => !fetchPaused && setAutoPolling(!autoPollingEnabled)}
+                disabled={fetchPaused}
+                title={
+                  fetchPaused
+                    ? 'Actualizaciones desactivadas'
+                    : autoPollingEnabled
+                      ? hasLiveMatches
+                        ? `Auto-actualización cada ${hasMatchInLast5 ? '1' : '5'} min`
+                        : 'Esperando partidos en vivo...'
+                      : 'Activar actualización automática'
+                }
+                className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  autoPollingEnabled
+                    ? hasLiveMatches
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
+                    : 'hover:bg-gray-100 text-gray-600'
+                }`}
+                aria-label={autoPollingEnabled ? 'Auto-actualizar ON' : 'Auto-actualizar OFF'}
+              >
+                <div className="flex items-center gap-1">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {autoPollingEnabled && hasLiveMatches && (
+                    <span className="text-[9px] font-bold">{hasMatchInLast5 ? '1' : '5'}min</span>
+                  )}
+                </div>
+              </button>
+
               {/* Refresh button */}
               <button
                 onClick={refresh}
-                disabled={isLoading}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                disabled={isLoading || fetchPaused}
+                title={fetchPaused ? 'Actualizaciones desactivadas' : 'Refrescar partidos'}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Refrescar"
               >
                 <svg 
@@ -52,27 +100,21 @@ function App() {
                 </svg>
               </button>
               
-              {/* Auto-polling toggle */}
-              <button
-                onClick={() => setAutoPolling(!autoPollingEnabled)}
-                className={`p-2 rounded-lg transition-colors ${
-                  autoPollingEnabled 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'hover:bg-gray-100 text-gray-600'
-                }`}
-                aria-label={autoPollingEnabled ? 'Auto-actualizar ON' : 'Auto-actualizar OFF'}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-
               {fetchPaused && (
                 <span className="text-xs font-medium text-red-600 ml-1 select-none">
                   Actualizaciones desactivadas
                 </span>
               )}
             </div>
+
+            {/* lastUpdated indicator */}
+            {lastUpdated && (
+              <div className="flex justify-end mt-1">
+                <span className="text-[10px] text-gray-400">
+                  Última actualización: {relativeTime}
+                </span>
+              </div>
+            )}
           </div>
         </div>
         
