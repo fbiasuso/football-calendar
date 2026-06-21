@@ -5,7 +5,7 @@
 // Si existe → modo estático para toda la sesión
 // Si no → fallback a API real (dev, o gh-pages no deployado)
 
-import { getDateKey } from '../utils/dateUtils.js';
+import { getDateKey, addDays } from '../utils/dateUtils.js';
 
 // Vite BASE_URL = '/football-calendar/' en prod (gh-pages), '/' en dev local
 const STATIC_BASE = `${import.meta.env.BASE_URL}data`;
@@ -77,18 +77,40 @@ async function ensureModeDetected() {
  */
 
 /**
- * Get all matches for a specific date
- * @param {Date|string} date
+ * Get all matches for a specific LOCAL date.
+ * Fetches static files for 2 UTC dates (local + next) and filters by local date,
+ * matching the same logic as apiFootball.getMatches().
+ * @param {Date|string} date - Local date to query
  * @returns {Promise<Match[]>}
  */
 export async function getMatches(date) {
   const isStatic = await ensureModeDetected();
 
   if (isStatic) {
-    const dateKey = getDateKey(date);
-    const data = await tryFetchStatic(`matches-${dateKey}.json`);
-    if (data) return data;
-    // Fall through to API fallback
+    const targetDate = new Date(date);
+    const dateKey = getDateKey(targetDate);
+    const nextKey = getDateKey(addDays(targetDate, 1));
+
+    // Fetch both UTC dates that could contain matches for this local day
+    const [data1, data2] = await Promise.all([
+      tryFetchStatic(`matches-${dateKey}.json`),
+      dateKey !== nextKey ? tryFetchStatic(`matches-${nextKey}.json`) : Promise.resolve(null),
+    ]);
+
+    const allMatches = [...(data1 || []), ...(data2 || [])];
+    if (allMatches.length === 0) {
+      // Fall through to API fallback if no static data at all
+      const { apiFootballClient } = await import('./apiFootball.js');
+      return apiFootballClient.getMatches(date);
+    }
+
+    // Filter by LOCAL date (matches what apiFootball does)
+    return allMatches.filter(m => {
+      const matchDate = new Date(m.date);
+      return matchDate.getFullYear() === targetDate.getFullYear() &&
+             matchDate.getMonth() === targetDate.getMonth() &&
+             matchDate.getDate() === targetDate.getDate();
+    });
   }
 
   const { apiFootballClient } = await import('./apiFootball.js');
