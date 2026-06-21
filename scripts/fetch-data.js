@@ -10,6 +10,7 @@ import { loadJSON, saveMatches, saveStandings, saveSchedule, saveMeta, hasChange
 
 const TODAY = new Date();
 const TOMORROW = new Date(TODAY.getTime() + 24 * 60 * 60 * 1000);
+const YESTERDAY = new Date(TODAY.getTime() - 24 * 60 * 60 * 1000);
 
 /**
  * Get the mode from env or auto-detect from current date
@@ -28,11 +29,14 @@ function detectMode() {
 function getKnownFixtures() {
   const todayKey = formatDate(TODAY);
   const tomorrowKey = formatDate(TOMORROW);
+  const yesterdayKey = formatDate(YESTERDAY);
 
   const todayMatches = loadJSON(`matches-${todayKey}.json`);
   const tomorrowMatches = loadJSON(`matches-${tomorrowKey}.json`);
+  const yesterdayMatches = loadJSON(`matches-${yesterdayKey}.json`);
 
   const fixtures = [];
+  if (Array.isArray(yesterdayMatches)) fixtures.push(...yesterdayMatches);
   if (Array.isArray(todayMatches)) fixtures.push(...todayMatches);
   if (Array.isArray(tomorrowMatches)) fixtures.push(...tomorrowMatches);
   return fixtures;
@@ -69,19 +73,29 @@ async function main() {
 
   const todayKey = formatDate(TODAY);
   const tomorrowKey = formatDate(TOMORROW);
+  const yesterdayKey = formatDate(YESTERDAY);
   let changed = false;
 
   try {
-    // Fetch fixtures for today and tomorrow
+    // Fetch fixtures for yesterday, today and tomorrow
+    // yesterday cubre timezones UTC-x (ej: ART=UTC-3, pide día local)
     if (schedule.endpoints.includes('fixtures')) {
-      console.log(`[fetch-data] Fetching matches for ${todayKey} and ${tomorrowKey}...`);
-      const [todayMatches, tomorrowMatches] = await Promise.all([
+      console.log(`[fetch-data] Fetching matches for ${yesterdayKey}, ${todayKey} and ${tomorrowKey}...`);
+      const [yesterdayMatches, todayMatches, tomorrowMatches] = await Promise.all([
+        getMatches(yesterdayKey),
         getMatches(todayKey),
         getMatches(tomorrowKey),
       ]);
 
+      const yesterdayChanged = saveMatches(yesterdayKey, yesterdayMatches);
       const todayChanged = saveMatches(todayKey, todayMatches);
       const tomorrowChanged = saveMatches(tomorrowKey, tomorrowMatches);
+      if (yesterdayChanged) {
+        console.log(`[fetch-data] Saved ${yesterdayMatches.length} matches for ${yesterdayKey} (changed)`);
+        changed = true;
+      } else {
+        console.log(`[fetch-data] Matches for ${yesterdayKey} unchanged`);
+      }
       if (todayChanged) {
         console.log(`[fetch-data] Saved ${todayMatches.length} matches for ${todayKey} (changed)`);
         changed = true;
@@ -96,7 +110,7 @@ async function main() {
       }
 
       // Save schedule (upcoming matches overview)
-      const allUpcoming = [...todayMatches, ...tomorrowMatches];
+      const allUpcoming = [...yesterdayMatches, ...todayMatches, ...tomorrowMatches];
       saveSchedule({
         generatedAt: TODAY.toISOString(),
         today: todayKey,
