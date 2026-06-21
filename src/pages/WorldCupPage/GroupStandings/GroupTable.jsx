@@ -17,7 +17,7 @@ export default function GroupTable({ group }) {
           <thead>
             <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider">
               <th className="px-1 py-1.5 text-center w-6">#</th>
-              <th className="px-1 py-1.5 text-left w-28">Equipo</th>
+              <th className="px-1 py-1.5 text-left w-32">Equipo</th>
               <th className="px-1.5 py-1.5 text-center w-6">Pts</th>
               <th className="px-1 py-1.5 text-center w-5">PJ</th>
               <th className="px-1 py-1.5 text-center w-5">G</th>
@@ -33,11 +33,11 @@ export default function GroupTable({ group }) {
               <tr
                 key={team.rank}
                 className={`border-t border-gray-100 ${
-                  team.rank === 1 ? 'bg-green-50' : team.rank === 2 ? 'bg-yellow-50' : team.rank === 3 ? 'bg-orange-50' : ''
+                  team.rank === 1 || team.rank === 2 ? 'bg-green-50' : team.rank === 3 ? 'bg-yellow-50' : ''
                 }`}
               >
                 <td className={`px-1 py-1.5 text-center font-bold ${
-                  team.rank === 1 ? 'text-green-700' : team.rank === 2 ? 'text-yellow-700' : team.rank === 3 ? 'text-orange-700' : 'text-gray-600'
+                  team.rank === 1 || team.rank === 2 ? 'text-green-700' : team.rank === 3 ? 'text-yellow-700' : 'text-gray-600'
                 }`}>
                   {team.rank}
                 </td>
@@ -51,7 +51,7 @@ export default function GroupTable({ group }) {
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     )}
-                    <span className="truncate max-w-[100px]" title={team.name}>
+                    <span className="truncate max-w-[120px]" title={team.name}>
                       {team.name}
                     </span>
                   </div>

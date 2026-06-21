@@ -22,9 +22,15 @@ export default function ThirdPlaceTable({ standings }) {
 
   return (
     <div className="mt-8 mx-auto max-w-xl">
-      <h3 className="text-base font-bold text-gray-700 mb-3 text-center">
+      <h3 className="text-base font-bold text-gray-700 mb-1 text-center">
         Ranking de terceros lugares
       </h3>
+      <div className="flex justify-center mb-3">
+        <span className="flex items-center gap-1.5 text-xs text-gray-600">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+          Clasificados a 16vos de final
+        </span>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
