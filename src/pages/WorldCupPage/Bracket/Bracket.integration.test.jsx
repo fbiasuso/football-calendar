@@ -13,6 +13,8 @@ const mockStore = vi.hoisted(() => ({
   wcPicks: {},
   setWcPick: vi.fn(),
   clearWcPicks: vi.fn(),
+  bracketMode: 'locked',
+  setBracketMode: vi.fn(),
 }));
 
 vi.mock('../../../store/useAppStore.js', () => ({
@@ -22,6 +24,8 @@ vi.mock('../../../store/useAppStore.js', () => ({
       wcPicks: mockStore.wcPicks,
       setWcPick: mockStore.setWcPick,
       clearWcPicks: mockStore.clearWcPicks,
+      bracketMode: mockStore.bracketMode,
+      setBracketMode: mockStore.setBracketMode,
     };
     return selector ? selector(state) : state;
   }),
@@ -55,6 +59,8 @@ beforeEach(() => {
   mockStore.wcPicks = {};
   mockStore.setWcPick.mockClear();
   mockStore.clearWcPicks.mockClear();
+  mockStore.bracketMode = 'locked';
+  mockStore.setBracketMode.mockClear();
 });
 
 describe('Bracket — loading and empty states', () => {
@@ -72,12 +78,12 @@ describe('Bracket — loading and empty states', () => {
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // Round headers should be visible
-    expect(screen.getByText('Dieciseisavos')).toBeInTheDocument();
-    expect(screen.getByText('Octavos')).toBeInTheDocument();
-    expect(screen.getByText('Cuartos')).toBeInTheDocument();
-    expect(screen.getByText('Semifinales')).toBeInTheDocument();
-    expect(screen.getByText('Final')).toBeInTheDocument();
+    // Round headers should be visible (use regex to match name + optional icon suffix)
+    expect(screen.getByText(/^Dieciseisavos/)).toBeInTheDocument();
+    expect(screen.getByText(/^Octavos/)).toBeInTheDocument();
+    expect(screen.getByText(/^Cuartos/)).toBeInTheDocument();
+    expect(screen.getByText(/^Semifinales/)).toBeInTheDocument();
+    expect(screen.getByText(/^Final/)).toBeInTheDocument();
   });
 });
 
@@ -154,20 +160,23 @@ describe('Bracket — pick controls', () => {
 });
 
 describe('Bracket — modal interaction', () => {
-  it('should open modal when a clickable R32 cell is clicked', () => {
+  it('should open modal when a clickable R32 cell is clicked in editing mode', () => {
+    mockStore.bracketMode = 'editing';
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
     // Find and click a team name in an R32 cell (e.g., A2 which is in M73)
     const teamEl = screen.getByText('A2');
-    fireEvent.click(teamEl.closest('[role="button"]') || teamEl);
+    const cell = teamEl.closest('[role="button"]');
+    expect(cell).not.toBeNull();
+    fireEvent.click(cell);
 
     // Modal should show the matchup info
-    // The modal has role "button" and we look for the team names within it
     expect(screen.getByText('M73')).toBeInTheDocument();
   });
 
   it('should call setWcPick when a team card is clicked in the modal', () => {
+    mockStore.bracketMode = 'editing';
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
@@ -181,14 +190,134 @@ describe('Bracket — modal interaction', () => {
     expect(screen.getByText('M73')).toBeInTheDocument();
 
     // Find the cursor-pointer card divs in the modal (not the close button)
-    // The home team card for M73 has cursor-pointer and contains "A2"
     const cursorCards = document.querySelectorAll('.fixed [class*="cursor-pointer"]');
     expect(cursorCards.length).toBeGreaterThanOrEqual(1);
 
     // Click the first cursor-pointer card (home team)
-    // This triggers onClick which calls handlePick(m.id, 'home') → setWcPick(id, 'home')
     fireEvent.click(cursorCards[0]);
 
     expect(mockStore.setWcPick).toHaveBeenCalledWith('M73', 'home');
+  });
+
+  it('should not open modal when clicking R32 cell in locked mode', () => {
+    mockStore.bracketMode = 'locked';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // In locked mode, cells should not have role="button"
+    const teamEl = screen.getByText('A2');
+    const cell = teamEl.closest('[role="button"]');
+    expect(cell).toBeNull();
+  });
+});
+
+describe('Bracket — editing mode', () => {
+  it('should show mode toggle button and switch between modes', () => {
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Default: locked mode shows "Editar predicciones" button
+    const toggleBtn = screen.getByText('✏️ Editar predicciones');
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Simulate clicking the toggle (the mock just tracks calls)
+    fireEvent.click(toggleBtn);
+    expect(mockStore.setBracketMode).toHaveBeenCalledWith('editing');
+  });
+
+  it('should show "Editar predicciones" in locked mode and "Bloquear" in editing mode', () => {
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // In editing mode, the toggle should show "Bloquear"
+    expect(screen.getByText('🔒 Bloquear')).toBeInTheDocument();
+  });
+});
+
+describe('Bracket — progressive round unlock', () => {
+  const ALL_R32_IDS = [
+    'M73', 'M74', 'M75', 'M76', 'M77', 'M78', 'M79', 'M80',
+    'M81', 'M82', 'M83', 'M84', 'M85', 'M86', 'M87', 'M88',
+  ];
+
+  it('should not allow R16 interaction when R32 is incomplete', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcPicks = {}; // No R32 picks
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // R32 header should be active, R16 should be locked
+    const r32Header = screen.getByText(/^Dieciseisavos/);
+    const r16Header = screen.getByText(/^Octavos/);
+
+    expect(r32Header.closest('[data-round-state="active"]')).toBeInTheDocument();
+    expect(r16Header.closest('[data-round-state="locked"]')).toBeInTheDocument();
+  });
+
+  it('should unlock R16 when all R32 picks are made', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // R32 should be completed, R16 should be active
+    const r32Header = screen.getByText(/^Dieciseisavos/);
+    const r16Header = screen.getByText(/^Octavos/);
+
+    expect(r32Header.closest('[data-round-state="completed"]')).toBeInTheDocument();
+    expect(r16Header.closest('[data-round-state="active"]')).toBeInTheDocument();
+  });
+
+  it('should show ✓ on completed round header', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    const r32Header = screen.getByText(/^Dieciseisavos/);
+    expect(r32Header.textContent).toContain('✓');
+  });
+});
+
+describe('Bracket — champion banner', () => {
+  function makeAllPicks() {
+    const ids = [
+      ...Array.from({ length: 16 }, (_, i) => `M${73 + i}`),
+      ...Array.from({ length: 8 }, (_, i) => `R16-M${i + 1}`),
+      ...Array.from({ length: 4 }, (_, i) => `QF-M${i + 1}`),
+      ...Array.from({ length: 2 }, (_, i) => `SF-M${i + 1}`),
+      'F-M1',
+    ];
+    return Object.fromEntries(ids.map((id) => [id, 'home']));
+  }
+
+  it('should show champion banner when Final has a pick', () => {
+    mockStore.wcPicks = makeAllPicks();
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // The champion should appear (E1 propagates through all 'home' picks)
+    expect(screen.getByText(/CAMPEÓN/i)).toBeInTheDocument();
+    expect(screen.getByText(/CAMPEÓN: E1/)).toBeInTheDocument();
+  });
+
+  it('should not show champion banner when Final has no pick', () => {
+    mockStore.wcPicks = { 'M73': 'home' };
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    expect(screen.queryByText(/CAMPEÓN/i)).toBeNull();
+  });
+
+  it('should remove champion banner after reset clears picks', () => {
+    mockStore.wcPicks = {};
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    expect(screen.queryByText(/CAMPEÓN/i)).toBeNull();
   });
 });

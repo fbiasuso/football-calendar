@@ -7,6 +7,39 @@ import { resolveBracket, isThirdPlaceSlot } from './bracketEngine.js';
 import { TOURNAMENT_GRAPH, R32_ORDER } from './bracketGraph.js';
 
 const ROUND_NAMES = ['Dieciseisavos', 'Octavos', 'Cuartos', 'Semifinales', 'Final'];
+const ROUND_INDEX_TO_ID = ['R32', 'R16', 'QF', 'SF', 'F'];
+
+/**
+ * Derive per-round state (active | completed | locked) from user picks.
+ * Progressively unlocks: R32 → R16 → QF → SF → Final.
+ * First incomplete round is 'active'; earlier rounds are 'completed'; later rounds 'locked'.
+ */
+export function computeRoundStates(wcPicks, graph) {
+  const rounds = ['R32', 'R16', 'QF', 'SF', 'F'];
+  const roundNodes = { R32: [], R16: [], QF: [], SF: [], F: [] };
+  for (const [id, node] of Object.entries(graph)) {
+    roundNodes[node.round].push(id);
+  }
+
+  const states = {};
+  let foundActive = false;
+
+  for (const round of rounds) {
+    const nodes = roundNodes[round];
+    const allPicked = nodes.every((id) => id in wcPicks);
+
+    if (foundActive) {
+      states[round] = 'locked';
+    } else if (allPicked) {
+      states[round] = 'completed';
+    } else {
+      states[round] = 'active';
+      foundActive = true;
+    }
+  }
+
+  return states;
+}
 
 /** Grid row offsets for each round (formula: 2^r - 1) */
 const ROUND_OFFSETS = [0, 1, 3, 7, 15];
@@ -70,7 +103,7 @@ const R32_DISPLAY = [
 const R32_DISPLAY_BY_ID = Object.fromEntries(R32_DISPLAY.map((d) => [d.id, d]));
 
 export default function Bracket({ standings: externalStandings, loading, rankerResult }) {
-  const { wcStandings, wcPicks, setWcPick, clearWcPicks } = useAppStore();
+  const { wcStandings, wcPicks, setWcPick, clearWcPicks, bracketMode, setBracketMode } = useAppStore();
   const [selectedMatchup, setSelectedMatchup] = useState(null);
 
   const standings = externalStandings || wcStandings?.groups || wcStandings || [];
@@ -85,6 +118,12 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
       return null;
     }
   }, [hasStandings, wcPicks, standings, rankerResult]);
+
+  // ── Derive per-round state from picks ────────────────────────────────────────
+  const roundStates = useMemo(
+    () => computeRoundStates(wcPicks, TOURNAMENT_GRAPH),
+    [wcPicks],
+  );
 
   // ── Build rounds + connectors with grid positioning ─────────────────────────
   const { rounds, connectors } = useMemo(() => {
@@ -205,13 +244,23 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
   // ── Render a single matchup cell ────────────────────────────────────────────
   const renderCell = (m) => {
+    const roundId = ROUND_INDEX_TO_ID[m.roundIndex];
+    const roundState = roundStates[roundId];
+
+    const isEditable =
+      bracketMode === 'editing' && roundState === 'active';
+
     const isClickable =
       !m.isPlaceholder &&
       !!m.home &&
       !!m.away;
 
-    const isPickedHome = m.roundIndex === 0 && m.winner === 'home';
-    const isPickedAway = m.roundIndex === 0 && m.winner === 'away';
+    const isPickedHome = m.winner === 'home';
+    const isPickedAway = m.winner === 'away';
+
+    const cellClickable = bracketMode === 'editing' && isClickable && isEditable;
+    const isLockedRound = bracketMode === 'editing' && roundState === 'locked';
+    const isLockedMode = bracketMode === 'locked';
 
     return (
       <div
@@ -219,9 +268,10 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         className={`
           matchup-cell flex flex-col justify-center relative
           ${m.isThirdPlace ? 'border-orange-200' : 'border-gray-200'}
-          ${isClickable && m.roundIndex === 0 ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm' : ''}
-          ${isClickable && m.roundIndex > 0 ? 'cursor-pointer hover:border-gray-300' : ''}
+          ${cellClickable && m.roundIndex === 0 ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm' : ''}
+          ${cellClickable && m.roundIndex > 0 ? 'cursor-pointer hover:border-gray-300' : ''}
           ${!isClickable && !m.isPlaceholder ? 'opacity-50' : ''}
+          ${isLockedRound ? 'opacity-40 pointer-events-none' : ''}
           bg-white border rounded-md px-1.5 py-1 transition-all text-xs
         `}
         style={{
@@ -230,12 +280,12 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           height: '52px',
         }}
         onClick={() => {
-          if (isClickable) setSelectedMatchup(m);
+          if (bracketMode === 'editing' && isClickable && isEditable) setSelectedMatchup(m);
         }}
-        role={isClickable ? 'button' : undefined}
-        tabIndex={isClickable ? 0 : -1}
+        role={cellClickable ? 'button' : undefined}
+        tabIndex={cellClickable ? 0 : -1}
         onKeyDown={(e) => {
-          if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
+          if (cellClickable && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
             setSelectedMatchup(m);
           }
@@ -295,14 +345,17 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
   const renderModal = () => {
     if (!selectedMatchup) return null;
     const m = selectedMatchup;
-    const isR32 = m.roundIndex === 0;
+    const roundId = ROUND_INDEX_TO_ID[m.roundIndex];
+    const roundState = roundStates[roundId];
     const bothKnown = !!(m.home && m.away);
     const display = R32_DISPLAY_BY_ID[m.id];
+    const isEditing = bracketMode === 'editing';
+    const canPick = isEditing && roundState === 'active' && bothKnown;
 
-    // Build source descriptions
+    // Build source descriptions (only for R32 with display config)
     let homeSource = null;
     let awaySource = null;
-    if (isR32 && display) {
+    if (m.roundIndex === 0 && display) {
       if (display.homeLabel) {
         const p = parseLabel(display.homeLabel);
         if (p) homeSource = rankToSource(p.rank, p.group);
@@ -314,6 +367,9 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         awaySource = `3° del grupo ${THIRD_PLACE_CANDIDATES[m.id] || ''}`;
       }
     }
+
+    const homeTeamName = m.home?.name || (m.roundIndex === 0 ? 'TBD' : 'Pendiente');
+    const awayTeamName = m.away?.name || (m.roundIndex === 0 && m.isThirdPlace && !bothKnown ? '3° por definir' : m.roundIndex === 0 ? 'TBD' : 'Pendiente');
 
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedMatchup(null)}>
@@ -333,7 +389,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <div
               className={`
                 flex flex-col items-center gap-2 text-center flex-1 min-w-0 p-3 rounded-lg border-2 transition-all
-                ${!bothKnown || !isR32
+                ${!bothKnown || !canPick
                   ? 'border-gray-100 bg-gray-50'
                   : wcPicks[m.id] === 'home'
                     ? 'border-blue-500 bg-blue-50 shadow-sm'
@@ -341,13 +397,11 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                 }
               `}
               onClick={() => {
-                if (isR32 && bothKnown) handlePick(m.id, 'home');
+                if (canPick) handlePick(m.id, 'home');
               }}
             >
               {m.home?.logo && <img src={m.home.logo} alt="" className="w-12 h-12" onError={(e) => { e.target.style.display = 'none'; }} />}
-              <span className="text-sm font-semibold text-gray-900 truncate w-full">
-                {m.home?.name || (isR32 ? 'TBD' : 'Pendiente')}
-              </span>
+              <span className="text-sm font-semibold text-gray-900 truncate w-full">{homeTeamName}</span>
               {homeSource && <span className="text-[10px] text-gray-400 leading-tight">{homeSource}</span>}
               {wcPicks[m.id] === 'home' && (
                 <span className="text-blue-600 text-lg leading-none">✓</span>
@@ -365,7 +419,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <div
               className={`
                 flex flex-col items-center gap-2 text-center flex-1 min-w-0 p-3 rounded-lg border-2 transition-all
-                ${!bothKnown || !isR32
+                ${!bothKnown || !canPick
                   ? 'border-gray-100 bg-gray-50'
                   : wcPicks[m.id] === 'away'
                     ? 'border-blue-500 bg-blue-50 shadow-sm'
@@ -373,13 +427,11 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                 }
               `}
               onClick={() => {
-                if (isR32 && bothKnown) handlePick(m.id, 'away');
+                if (canPick) handlePick(m.id, 'away');
               }}
             >
               {m.away?.logo && <img src={m.away.logo} alt="" className="w-12 h-12" onError={(e) => { e.target.style.display = 'none'; }} />}
-              <span className="text-sm font-semibold text-gray-900 truncate w-full">
-                {m.away?.name || (isR32 && m.isThirdPlace && !bothKnown ? '3° por definir' : isR32 ? 'TBD' : 'Pendiente')}
-              </span>
+              <span className="text-sm font-semibold text-gray-900 truncate w-full">{awayTeamName}</span>
               {awaySource && <span className="text-[10px] text-gray-400 leading-tight">{awaySource}</span>}
               {wcPicks[m.id] === 'away' && (
                 <span className="text-blue-600 text-lg leading-none">✓</span>
@@ -389,15 +441,25 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
           {/* Footer info */}
           <div className="mt-4 text-center">
-            <span className="text-[11px] text-gray-400">
-              {m.isPlaceholder
-                ? 'Las posiciones estarán disponibles cuando comience el torneo.'
-                : !bothKnown
-                  ? 'Ambos equipos deben estar definidos para seleccionar un ganador.'
-                  : isR32
-                    ? 'Hacé click en el equipo que creés que va a ganar.'
-                    : 'Partido determinado por resultados de rondas anteriores.'}
-            </span>
+            {isEditing && roundState === 'locked' ? (
+              <span className="text-[11px] text-amber-600 font-medium">
+                Completá los picks de la ronda anterior para desbloquear
+              </span>
+            ) : isEditing && roundState === 'completed' ? (
+              <span className="text-[11px] text-green-600 font-medium">
+                Ya seleccionaste un ganador para este cruce
+              </span>
+            ) : (
+              <span className="text-[11px] text-gray-400">
+                {m.isPlaceholder
+                  ? 'Las posiciones estarán disponibles cuando comience el torneo.'
+                  : !bothKnown
+                    ? 'Ambos equipos deben estar definidos para seleccionar un ganador.'
+                    : isEditing && roundState === 'active'
+                      ? 'Elegí el ganador de este cruce'
+                      : 'Partido determinado por resultados de rondas anteriores.'}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -425,6 +487,15 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
     );
   }
 
+  // ── Champion name ────────────────────────────────────────────────────────────
+  const championName = useMemo(() => {
+    if (!wcPicks['F-M1'] || !bracketData?.matchups['F-M1']) return null;
+    const final = bracketData.matchups['F-M1'];
+    if (final.winner === 'home' && final.home?.name) return final.home.name;
+    if (final.winner === 'away' && final.away?.name) return final.away.name;
+    return null;
+  }, [wcPicks, bracketData]);
+
   // ── Main render ─────────────────────────────────────────────────────────────
   const pickCount = Object.keys(wcPicks).length;
 
@@ -432,8 +503,28 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
     <div>
       {renderModal()}
 
+      {/* Champion banner */}
+      {championName && (
+        <div className="mb-4 flex items-center justify-center gap-2 bg-yellow-50 border-2 border-yellow-400 rounded-xl px-6 py-3">
+          <span className="text-lg">🏆</span>
+          <p className="text-base font-bold text-yellow-800">
+            CAMPEÓN: {championName}
+          </p>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="mb-6 flex items-center gap-4 flex-wrap">
+        <button
+          onClick={() => setBracketMode(bracketMode === 'locked' ? 'editing' : 'locked')}
+          className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+            bracketMode === 'editing'
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          {bracketMode === 'editing' ? '🔒 Bloquear' : '✏️ Editar predicciones'}
+        </button>
         <button
           onClick={() => { clearWcPicks(); setSelectedMatchup(null); }}
           disabled={pickCount === 0}
@@ -445,7 +536,10 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         >
           Resetear picks
         </button>
-        {pickCount === 0 && (
+        {pickCount === 0 && bracketMode === 'locked' && (
+          <span className="text-xs text-gray-500">Cambiá a Editar predicciones para elegir ganadores</span>
+        )}
+        {pickCount === 0 && bracketMode === 'editing' && (
           <span className="text-xs text-gray-500">Hacé click en cualquier cruce de R32 para elegir ganador</span>
         )}
         {pickCount > 0 && (
@@ -465,15 +559,29 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           }}
         >
           {/* Round headers */}
-          {ROUND_NAMES.map((name, r) => (
-            <div
-              key={`hdr-${r}`}
-              className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider pb-2 border-b border-gray-200"
-              style={{ gridRow: '1', gridColumn: r * 2 + 1 }}
-            >
-              {name}
-            </div>
-          ))}
+          {ROUND_NAMES.map((name, r) => {
+            const roundId = ROUND_INDEX_TO_ID[r];
+            const state = roundStates[roundId];
+            const headerClasses =
+              state === 'active'
+                ? 'text-blue-700 border-b-2 border-blue-400 bg-blue-50'
+                : state === 'completed'
+                  ? 'text-green-700 border-b-2 border-green-400 bg-green-50'
+                  : 'text-gray-400 border-b border-gray-200';
+            const stateIcon =
+              state === 'completed' ? ' ✓' : state === 'locked' ? ' 🔒' : '';
+
+            return (
+              <div
+                key={`hdr-${r}`}
+                className={`text-center text-xs font-bold uppercase tracking-wider pb-2 transition-colors ${headerClasses}`}
+                style={{ gridRow: '1', gridColumn: r * 2 + 1 }}
+                data-round-state={state}
+              >
+                {name}{stateIcon}
+              </div>
+            );
+          })}
 
           {/* Matchup cells */}
           {rounds.map((round) =>

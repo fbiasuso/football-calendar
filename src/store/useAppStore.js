@@ -29,6 +29,7 @@ const useAppStore = create(
 
       // Bracket pick'em (persisted via partialize)
       wcPicks: {},           // { [matchupId]: 'home' | 'away' }
+      bracketMode: 'locked', // 'locked' | 'editing'
       
       // Actions
       setMatches: (matches) => set({ 
@@ -82,6 +83,7 @@ const useAppStore = create(
         }
         return { wcPicks: newPicks };
       }),
+      setBracketMode: (mode) => set({ bracketMode: mode }),
       clearWcPicks: () => set({ wcPicks: {} }),
       
       // Async action to fetch matches
@@ -113,6 +115,7 @@ const useAppStore = create(
         sortMode: state.sortMode,
         autoPollingEnabled: state.autoPollingEnabled,
         wcPicks: state.wcPicks,
+        bracketMode: state.bracketMode,
       }),
     }
   )
