@@ -809,6 +809,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           {/* Step: Teams assignment */}
           {!showWinnerStep && (
             <>
+              <p className="text-xs font-medium text-gray-500 text-center mb-3">Elegí los equipos del cruce</p>
               <div className="flex justify-center items-start gap-4">
                 <div className="w-36 flex-shrink-0">
                   <SlotPoolSelector
@@ -844,13 +845,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     rank={isThird ? 3 : 2}
                   />
                 </div>
-              </div>
-
-              {/* Footer: teams step */}
-              <div className="mt-4 text-center">
-                <span className="text-[11px] text-gray-500">
-                  Elegí los equipos del cruce
-                </span>
               </div>
             </>
           )}
