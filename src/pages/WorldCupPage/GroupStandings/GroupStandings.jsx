@@ -48,15 +48,18 @@ export default function GroupStandings({ standings, loading, error, onRetry }) {
   return (
     <>
       {/* Referencias */}
-      <div className="flex items-center gap-5 mb-4 text-xs text-gray-600">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
-          Clasificados a 16vos de final
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 flex-shrink-0" />
-          Al Ranking de mejores 3°
-        </span>
+      <div className="flex items-center justify-between gap-5 mb-4 text-xs text-gray-600">
+        <div className="flex items-center gap-5">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+            Clasificados a 16vos de final
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 flex-shrink-0" />
+            Al Ranking de mejores 3°
+          </span>
+        </div>
+        <span className="text-[10px] text-gray-400 flex-shrink-0">Criterio: Pts &gt; DG &gt; GF &gt; H2H</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {standings.map((group) => (

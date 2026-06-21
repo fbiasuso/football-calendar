@@ -17,7 +17,7 @@ export default function GroupTable({ group }) {
           <thead>
             <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider">
               <th className="px-1 py-1.5 text-center w-6">#</th>
-              <th className="px-1 py-1.5 text-left w-32">Equipo</th>
+              <th className="px-1 py-1.5 text-left w-24">Equipo</th>
               <th className="px-1.5 py-1.5 text-center w-6">Pts</th>
               <th className="px-1 py-1.5 text-center w-5">PJ</th>
               <th className="px-1 py-1.5 text-center w-5">G</th>
@@ -51,7 +51,7 @@ export default function GroupTable({ group }) {
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     )}
-                    <span className="truncate max-w-[120px]" title={team.name}>
+                    <span className="truncate max-w-[80px]" title={team.name}>
                       {team.name}
                     </span>
                   </div>
@@ -75,9 +75,6 @@ export default function GroupTable({ group }) {
           </tbody>
         </table>
       </div>
-      <p className="px-3 py-1.5 text-[10px] text-gray-400 text-right border-t border-gray-100">
-        Criterio de grupo: Pts &gt; DG &gt; GF &gt; H2H
-      </p>
     </div>
   );
 }
