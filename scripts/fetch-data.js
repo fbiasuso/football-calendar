@@ -125,8 +125,8 @@ async function main() {
       changed = true;
     }
 
-    // Fetch standings (World Cup mode)
-    if (schedule.endpoints.includes('standings')) {
+    // Fetch standings (always in World Cup mode, or if schedule says so)
+    if (schedule.endpoints.includes('standings') || mode === 'worldcup') {
       console.log('[fetch-data] Fetching World Cup standings...');
       const standings = await getStandings(1, 2026);
       const standingsChanged = saveStandings(standings);
