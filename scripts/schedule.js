@@ -118,7 +118,24 @@ export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }
 
     // In active window: check fixtures
     if (!knownFixtures || knownFixtures.length === 0) {
-      reasons.push('no hay partidos programados');
+      // No fixtures known — check every 4h or fetch immediately on first run
+      const lastFetchTime = lastFetched ? new Date(lastFetched) : null;
+      const hoursSinceLastFetch = lastFetchTime
+        ? (now.getTime() - lastFetchTime.getTime()) / (60 * 60 * 1000)
+        : 99; // first run: always fetch
+
+      if (hoursSinceLastFetch >= 4) {
+        reasons.push('worldcup: sin fixtures, chequeando si aparecieron');
+        endpoints.push('fixtures');
+        return {
+          shouldFetch: true,
+          reasons,
+          nextPlanned: new Date(now.getTime() + 4 * 60 * 60 * 1000),
+          endpoints,
+        };
+      }
+
+      reasons.push(`worldcup: sin fixtures, último fetch ${hoursSinceLastFetch.toFixed(1)}h atrás`);
       return {
         shouldFetch: false,
         reasons,
