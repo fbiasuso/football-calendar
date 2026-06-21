@@ -7,7 +7,8 @@
 
 import { getDateKey } from '../utils/dateUtils.js';
 
-const STATIC_BASE = '/data';
+// Vite BASE_URL = '/football-calendar/' en prod (gh-pages), '/' en dev local
+const STATIC_BASE = `${import.meta.env.BASE_URL}data`;
 let staticMode = null; // null=unsure, true=static, false=live (cached after first check)
 
 /**
