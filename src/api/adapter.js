@@ -190,10 +190,12 @@ export async function getRounds(leagueId, season) {
   const isStatic = await ensureModeDetected();
 
   if (isStatic) {
-    // Rounds not typically stored as static file; if available, could be in schedule
     const data = await tryFetchStatic('schedule.json');
-    // schedule.json doesn't contain rounds, so fall through
-    if (data && data.rounds) return data.rounds;
+    if (data) {
+      // If schedule exists, return rounds if available, or empty array otherwise
+      // (avoid API fallback — it will 404 in production)
+      return data.rounds || [];
+    }
   }
 
   const { apiFootballClient } = await import('./apiFootball.js');
