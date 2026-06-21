@@ -414,16 +414,35 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
   };
 
   // Slot handler for R32 modal step 'teams': assign team to slot, don't pick winner
+  // Assign team to a slot. If team already exists in another slot, move it (option B).
   const handleSlotAssign = useCallback((matchupId, side, team) => {
     const slotId = `${matchupId}-${side}`;
     const currentSlot = wcSlots[slotId];
     const isSameTeam = currentSlot?.name === team.name && currentSlot?.group === team.group;
     if (isSameTeam) {
+      // Re-click on same team → clear
       clearWcSlot(slotId);
-    } else {
-      setWcSlot(slotId, team);
+      return;
     }
-  }, [setWcSlot, clearWcSlot, wcSlots]);
+
+    // Check if team is already assigned to another slot → move it
+    for (const [existingSlotId, existingTeam] of Object.entries(wcSlots)) {
+      if (existingSlotId === slotId) continue;
+      if (existingTeam?.name === team.name && existingTeam?.group === team.group) {
+        // Clear from old slot
+        clearWcSlot(existingSlotId);
+        // If that old slot's side was the winner, clear winner pick too
+        const existingMid = existingSlotId.replace(/-(home|away)$/, '');
+        const existingSide = existingSlotId.endsWith('-home') ? 'home' : 'away';
+        if (wcPicks[existingMid] === existingSide) {
+          setWcPick(existingMid, undefined);
+        }
+        break;
+      }
+    }
+
+    setWcSlot(slotId, team);
+  }, [setWcSlot, clearWcSlot, setWcPick, wcSlots, wcPicks]);
 
   // Winner pick handler for R32 modal step 'winner': saves pick and closes modal
   const handleWinnerPick = useCallback((matchupId, side) => {
@@ -435,9 +454,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
   const renderCell = (m) => {
     const roundId = ROUND_INDEX_TO_ID[m.roundIndex];
     const roundState = roundStates[roundId];
-
-    const isEditable =
-      bracketMode === 'editing' && roundState === 'active';
 
     // For R32 cells in editing mode, use wcSlots directly for display
     let displayHome = m.home;
@@ -452,19 +468,20 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
       !!m.home &&
       !!m.away;
 
-    // R32 cells are always clickable in editing mode (to open slot assign modal)
-    // All cells are clickable in locked mode (to open read-only modal)
+    // R32: always clickable in editing (to edit teams/winner)
+    // R16+: clickable only when teams are resolved (engine verified feeders)
     const cellClickable =
       bracketMode === 'locked'
         ? isClickable || (m.roundIndex === 0 && !m.isPlaceholder)
-        : (bracketMode === 'editing' && isEditable && (
+        : (bracketMode === 'editing' && (
             m.roundIndex === 0 ? !m.isPlaceholder : isClickable
           ));
 
     const isPickedHome = m.winner === 'home';
     const isPickedAway = m.winner === 'away';
 
-    const isLockedRound = bracketMode === 'editing' && roundState === 'locked';
+    // Locked visual for R32 comes from round state; R16+ uses isClickable (engine-determined)
+    const isLockedRound = bracketMode === 'editing' && roundState === 'locked' && m.roundIndex === 0;
     const isLockedMode = bracketMode === 'locked';
 
     // Text for R32 teams in editing mode
@@ -559,7 +576,8 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
   const renderR16PlusModal = () => {
     const m = selectedMatchup;
     const display = R32_DISPLAY_BY_ID[m.id];
-    const canPick = bracketMode === 'editing' && roundStates[ROUND_INDEX_TO_ID[m.roundIndex]] === 'active' && !!(m.home && m.away);
+    // R16+ can be picked if both teams are resolved (engine already verified feeders)
+    const canPick = bracketMode === 'editing' && !!(m.home && m.away) && !m.isPlaceholder;
 
     // Build source descriptions (only for R32 with display config)
     let homeSource = null;
@@ -642,25 +660,17 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             </div>
           </div>
 
-          {/* Footer info */}
+          {/* Footer info — no longer depends on roundState (per-pair unlock) */}
           <div className="mt-4 text-center">
-            {bracketMode === 'editing' && roundStates[ROUND_INDEX_TO_ID[m.roundIndex]] === 'locked' ? (
-              <span className="text-[11px] text-amber-600 font-medium">
-                Completá los picks de la ronda anterior para desbloquear
-              </span>
-            ) : bracketMode === 'editing' && roundStates[ROUND_INDEX_TO_ID[m.roundIndex]] === 'completed' ? (
+            {m.winner ? (
               <span className="text-[11px] text-green-600 font-medium">
                 Ya seleccionaste un ganador para este cruce
               </span>
             ) : (
               <span className="text-[11px] text-gray-400">
-                {m.isPlaceholder
-                  ? 'Las posiciones estarán disponibles cuando comience el torneo.'
-                  : !(m.home && m.away)
-                    ? 'Ambos equipos deben estar definidos para seleccionar un ganador.'
-                    : bracketMode === 'editing' && roundStates[ROUND_INDEX_TO_ID[m.roundIndex]] === 'active'
-                      ? 'Elegí el ganador de este cruce'
-                      : 'Partido determinado por resultados de rondas anteriores.'}
+                {!canPick
+                  ? 'Partido determinado por resultados de rondas anteriores.'
+                  : 'Elegí el ganador de este cruce'}
               </span>
             )}
           </div>
