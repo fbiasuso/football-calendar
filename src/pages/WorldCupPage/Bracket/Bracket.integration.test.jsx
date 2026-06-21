@@ -7,7 +7,7 @@ afterEach(cleanup);
 
 // ── Mock setup ────────────────────────────────────────────────────────────────
 
-// We mock useAppStore to control wcPicks and wcStandings
+// We mock useAppStore to control wcPicks, wcStandings, wcSlots
 const mockStore = vi.hoisted(() => ({
   wcStandings: null,
   wcPicks: {},
@@ -15,6 +15,10 @@ const mockStore = vi.hoisted(() => ({
   clearWcPicks: vi.fn(),
   bracketMode: 'locked',
   setBracketMode: vi.fn(),
+  wcSlots: {},
+  setWcSlot: vi.fn(),
+  clearWcSlot: vi.fn(),
+  clearAllWcSlots: vi.fn(),
 }));
 
 vi.mock('../../../store/useAppStore.js', () => ({
@@ -26,6 +30,10 @@ vi.mock('../../../store/useAppStore.js', () => ({
       clearWcPicks: mockStore.clearWcPicks,
       bracketMode: mockStore.bracketMode,
       setBracketMode: mockStore.setBracketMode,
+      wcSlots: mockStore.wcSlots,
+      setWcSlot: mockStore.setWcSlot,
+      clearWcSlot: mockStore.clearWcSlot,
+      clearAllWcSlots: mockStore.clearAllWcSlots,
     };
     return selector ? selector(state) : state;
   }),
@@ -61,6 +69,10 @@ beforeEach(() => {
   mockStore.clearWcPicks.mockClear();
   mockStore.bracketMode = 'locked';
   mockStore.setBracketMode.mockClear();
+  mockStore.wcSlots = {};
+  mockStore.setWcSlot.mockClear();
+  mockStore.clearWcSlot.mockClear();
+  mockStore.clearAllWcSlots.mockClear();
 });
 
 describe('Bracket — loading and empty states', () => {
@@ -144,7 +156,7 @@ describe('Bracket — pick controls', () => {
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    expect(screen.getByText(/2 picks activos/)).toBeInTheDocument();
+    expect(screen.getByText(/2 picks.*0 slots/)).toBeInTheDocument();
   });
 
   it('should call clearWcPicks when "Resetear picks" is clicked', () => {
@@ -165,14 +177,15 @@ describe('Bracket — modal interaction', () => {
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // Find and click a team name in an R32 cell (e.g., A2 which is in M73)
-    const teamEl = screen.getByText('A2');
-    const cell = teamEl.closest('[role="button"]');
-    expect(cell).not.toBeNull();
-    fireEvent.click(cell);
+    // In editing mode, R32 cells show "Elegir Equipo" and are clickable
+    const elegirEls = document.querySelectorAll('[role="button"]');
+    expect(elegirEls.length).toBeGreaterThan(0);
 
-    // Modal should show the matchup info
-    expect(screen.getByText('M73')).toBeInTheDocument();
+    // Click the first clickable cell (M74 in visual order)
+    fireEvent.click(elegirEls[0]);
+
+    // Modal should show the matchup info (M74 is first in R32_ORDER)
+    expect(screen.getByText('M74')).toBeInTheDocument();
   });
 
   it('should call setWcPick when a team card is clicked in the modal', () => {
@@ -180,34 +193,41 @@ describe('Bracket — modal interaction', () => {
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // Click on a clickable R32 cell to open the modal
-    const teamEl = screen.getByText('A2');
-    const cell = teamEl.closest('[role="button"]');
-    expect(cell).not.toBeNull();
-    fireEvent.click(cell);
+    // Click first R32 clickable cell (M74)
+    const elegirEls = document.querySelectorAll('[role="button"]');
+    fireEvent.click(elegirEls[0]);
 
-    // The modal should now be visible showing M73
-    expect(screen.getByText('M73')).toBeInTheDocument();
+    // The modal should now be visible showing M74
+    expect(screen.getByText('M74')).toBeInTheDocument();
 
-    // Find the cursor-pointer card divs in the modal (not the close button)
-    const cursorCards = document.querySelectorAll('.fixed [class*="cursor-pointer"]');
-    expect(cursorCards.length).toBeGreaterThanOrEqual(1);
+    // The modal has team buttons — find the cursor-pointer team buttons in the modal
+    // In the R32 modal, the team cards are buttons with cursor-pointer class
+    const teamButtons = document.querySelectorAll('.fixed [class*="cursor-pointer"]');
+    expect(teamButtons.length).toBeGreaterThanOrEqual(1);
 
-    // Click the first cursor-pointer card (home team)
-    fireEvent.click(cursorCards[0]);
+    // Click the first cursor-pointer team card (home team E1 from Group E)
+    fireEvent.click(teamButtons[0]);
 
-    expect(mockStore.setWcPick).toHaveBeenCalledWith('M73', 'home');
+    // Should call setWcSlot and setWcPick (active side = home)
+    expect(mockStore.setWcSlot).toHaveBeenCalledWith('M74-home', expect.objectContaining({ name: 'E1' }));
+    expect(mockStore.setWcPick).toHaveBeenCalledWith('M74', 'home');
   });
 
-  it('should not open modal when clicking R32 cell in locked mode', () => {
+  it('should open read-only modal when clicking R32 cell in locked mode', () => {
     mockStore.bracketMode = 'locked';
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // In locked mode, cells should not have role="button"
+    // In locked mode, cells are clickable and open read-only modal
     const teamEl = screen.getByText('A2');
-    const cell = teamEl.closest('[role="button"]');
-    expect(cell).toBeNull();
+    const cell = teamEl.closest('.matchup-cell');
+    expect(cell).not.toBeNull();
+    fireEvent.click(cell);
+
+    // Read-only modal should show matchup info without editing controls
+    expect(screen.getByText('M73')).toBeInTheDocument();
+    // No Local/Visitante toggle (editing controls)
+    expect(screen.queryByText('Local')).toBeNull();
   });
 });
 
@@ -255,9 +275,19 @@ describe('Bracket — progressive round unlock', () => {
     expect(r16Header.closest('[data-round-state="locked"]')).toBeInTheDocument();
   });
 
-  it('should unlock R16 when all R32 picks are made', () => {
+  function make32Slots() {
+    const slots = {};
+    for (const id of ALL_R32_IDS) {
+      slots[`${id}-home`] = { name: `${id}-h`, logo: null, group: 'A' };
+      slots[`${id}-away`] = { name: `${id}-a`, logo: null, group: 'B' };
+    }
+    return slots;
+  }
+
+  it('should unlock R16 when all 32 slots and all 16 R32 picks are made', () => {
     mockStore.bracketMode = 'editing';
     mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    mockStore.wcSlots = make32Slots();
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
@@ -269,9 +299,10 @@ describe('Bracket — progressive round unlock', () => {
     expect(r16Header.closest('[data-round-state="active"]')).toBeInTheDocument();
   });
 
-  it('should show ✓ on completed round header', () => {
+  it('should show ✓ on completed round header when slots + picks are complete', () => {
     mockStore.bracketMode = 'editing';
     mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    mockStore.wcSlots = make32Slots();
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
@@ -319,5 +350,173 @@ describe('Bracket — champion banner', () => {
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
     expect(screen.queryByText(/CAMPEÓN/i)).toBeNull();
+  });
+});
+
+describe('Bracket — R32 slot assignment', () => {
+  it('should show "Elegir Equipo" for unassigned R32 slots in editing mode', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {}; // No slots assigned yet
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // R32 cells should show "Elegir Equipo" in editing mode
+    const elegirEls = screen.getAllByText('Elegir Equipo');
+    expect(elegirEls.length).toBeGreaterThanOrEqual(16);
+  });
+
+  it('should show assigned team from wcSlots in editing mode', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M73-home': { name: 'CustomA', logo: null, group: 'A' },
+      'M73-away': { name: 'CustomB', logo: null, group: 'B' },
+    };
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    expect(screen.getByText('CustomA')).toBeInTheDocument();
+    expect(screen.getByText('CustomB')).toBeInTheDocument();
+  });
+
+  it('should call setWcPick and setWcSlot when opening modal in editing mode', () => {
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click first clickable R32 cell (opens modal)
+    const buttons = document.querySelectorAll('[role="button"]');
+    expect(buttons.length).toBeGreaterThan(0);
+    fireEvent.click(buttons[0]);
+
+    // Modal should show some matchup header (first in R32_ORDER is M74)
+    expect(screen.getByText('M74')).toBeInTheDocument();
+  });
+});
+
+describe('Bracket — locked mode read-only', () => {
+  it('should show standings teams in locked mode (not Elegir Equipo)', () => {
+    mockStore.bracketMode = 'locked';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Locked mode should show standings teams, not placeholder text
+    expect(screen.getByText('A2')).toBeInTheDocument();
+    expect(screen.getByText('B2')).toBeInTheDocument();
+    expect(screen.queryByText('Elegir Equipo')).toBeNull();
+  });
+
+  it('should open read-only modal when clicking a cell in locked mode', () => {
+    mockStore.bracketMode = 'locked';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // In locked mode, cells show standings teams and are clickable
+    // Find M73 cell (2°A vs 2°B = A2 vs B2) - it's the third cell in the grid
+    const teamEl = screen.getByText('A2');
+    const cell = teamEl.closest('.matchup-cell');
+    expect(cell).not.toBeNull();
+    fireEvent.click(cell);
+
+    // Modal should show the matchup header
+    expect(screen.getByText('M73')).toBeInTheDocument();
+  });
+
+  it('should NOT show slot assignment toggle in locked mode modal', () => {
+    mockStore.bracketMode = 'locked';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M73 cell (A2 is visible in M73)
+    const teamEl = screen.getByText('A2');
+    const cell = teamEl.closest('.matchup-cell');
+    fireEvent.click(cell);
+
+    // Modal shows read-only content
+    expect(screen.getByText('M73')).toBeInTheDocument();
+    // No "Local" / "Visitante" toggle buttons (present in R32 modal)
+    expect(screen.queryByText('Local')).toBeNull();
+    expect(screen.queryByText('Visitante')).toBeNull();
+  });
+});
+
+describe('Bracket — progressive unlock with slots', () => {
+  const ALL_R32_IDS = [
+    'M73', 'M74', 'M75', 'M76', 'M77', 'M78', 'M79', 'M80',
+    'M81', 'M82', 'M83', 'M84', 'M85', 'M86', 'M87', 'M88',
+  ];
+
+  function make32Slots() {
+    const slots = {};
+    for (const id of ALL_R32_IDS) {
+      slots[`${id}-home`] = { name: `${id}-h`, logo: null, group: 'A' };
+      slots[`${id}-away`] = { name: `${id}-a`, logo: null, group: 'B' };
+    }
+    return slots;
+  }
+
+  it('should keep R32 active when no slots are assigned (even with full picks)', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    mockStore.wcSlots = {}; // No slots
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // R32 header should show active (not completed) because slots are missing
+    const r32Header = screen.getByText(/^Dieciseisavos/);
+    expect(r32Header.closest('[data-round-state="active"]')).toBeInTheDocument();
+    expect(r32Header.closest('[data-round-state="completed"]')).toBeNull();
+  });
+
+  it('should unlock R16 when 32 slots + 16 R32 picks are done', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    mockStore.wcSlots = make32Slots();
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // R32 completed, R16 active
+    const r32Header = screen.getByText(/^Dieciseisavos/);
+    const r16Header = screen.getByText(/^Octavos/);
+    expect(r32Header.closest('[data-round-state="completed"]')).toBeInTheDocument();
+    expect(r16Header.closest('[data-round-state="active"]')).toBeInTheDocument();
+  });
+
+  it('should show R32 as completed when slots + picks are full', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcPicks = Object.fromEntries(ALL_R32_IDS.map((id) => [id, 'home']));
+    mockStore.wcSlots = make32Slots();
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    const r32Header = screen.getByText(/^Dieciseisavos/);
+    expect(r32Header.textContent).toContain('✓');
+  });
+});
+
+describe('Bracket — reset clears slots', () => {
+  it('should call clearAllWcSlots and clearWcPicks when reset is clicked', () => {
+    mockStore.wcPicks = { M73: 'home' };
+    mockStore.wcSlots = { 'M73-home': { name: 'A2', logo: null, group: 'A' } };
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    const resetBtn = screen.getByText('Resetear picks');
+    expect(resetBtn).toBeEnabled();
+    fireEvent.click(resetBtn);
+
+    expect(mockStore.clearWcPicks).toHaveBeenCalledOnce();
+    expect(mockStore.clearAllWcSlots).toHaveBeenCalledOnce();
+  });
+
+  it('should enable reset button when slots exist (even without picks)', () => {
+    mockStore.wcPicks = {};
+    mockStore.wcSlots = { 'M73-home': { name: 'A2', logo: null, group: 'A' } };
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    const resetBtn = screen.getByText('Resetear picks');
+    expect(resetBtn).toBeEnabled();
   });
 });

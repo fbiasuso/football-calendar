@@ -69,15 +69,24 @@ const ROUND_ORDER = { R32: 0, R16: 1, QF: 2, SF: 3, F: 4 };
  * @param {Object|null}          rankerResult  - Result of thirdPlaceRanker(standings)
  * @returns {{ matchups: Object }}
  */
-export function resolveBracket(picks, graph, standings, rankerResult) {
+export function resolveBracket(picks, graph, standings, rankerResult, wcSlots) {
   const matchups = {};
 
   // ── Step 1: Resolve R32 ─────────────────────────────────────────────────────
   for (const cfg of R32_CONFIG) {
-    const home = getTeamByRank(standings, cfg.homeRank, cfg.homeGroup);
-    let away = null;
+    // Check wcSlots first (slot-based assignment overrides standings)
+    let home = null;
+    if (wcSlots?.[cfg.id + '-home']) {
+      home = wcSlots[cfg.id + '-home'];
+    }
+    if (!home) {
+      home = getTeamByRank(standings, cfg.homeRank, cfg.homeGroup);
+    }
 
-    if (cfg.type === 'fixed') {
+    let away = null;
+    if (wcSlots?.[cfg.id + '-away']) {
+      away = wcSlots[cfg.id + '-away'];
+    } else if (cfg.type === 'fixed') {
       away = getTeamByRank(standings, cfg.awayRank, cfg.awayGroup);
     } else if (rankerResult?.thirdPlaceSlots) {
       const slot = rankerResult.thirdPlaceSlots.find((s) => s.matchupId === cfg.id);

@@ -29,6 +29,7 @@ const useAppStore = create(
 
       // Bracket pick'em (persisted via partialize)
       wcPicks: {},           // { [matchupId]: 'home' | 'away' }
+      wcSlots: {},           // { [slotId]: { name, logo, group } | null }
       bracketMode: 'locked', // 'locked' | 'editing'
       
       // Actions
@@ -85,6 +86,25 @@ const useAppStore = create(
       }),
       setBracketMode: (mode) => set({ bracketMode: mode }),
       clearWcPicks: () => set({ wcPicks: {} }),
+      setWcSlot: (slotId, team) => set((state) => {
+        const newSlots = { ...state.wcSlots, [slotId]: team };
+        // Clear downstream picks when slot changes
+        const newPicks = { ...state.wcPicks };
+        const matchupId = slotId.replace(/-(home|away)$/, '');
+        let current = matchupId;
+        while (TOURNAMENT_GRAPH[current]?.feedsInto) {
+          const next = TOURNAMENT_GRAPH[current].feedsInto;
+          delete newPicks[next];
+          current = next;
+        }
+        return { wcSlots: newSlots, wcPicks: newPicks };
+      }),
+      clearWcSlot: (slotId) => set((state) => {
+        const newSlots = { ...state.wcSlots };
+        delete newSlots[slotId];
+        return { wcSlots: newSlots };
+      }),
+      clearAllWcSlots: () => set({ wcSlots: {} }),
       
       // Async action to fetch matches
       fetchMatches: async () => {
@@ -115,6 +135,7 @@ const useAppStore = create(
         sortMode: state.sortMode,
         autoPollingEnabled: state.autoPollingEnabled,
         wcPicks: state.wcPicks,
+        wcSlots: state.wcSlots,
         bracketMode: state.bracketMode,
       }),
     }

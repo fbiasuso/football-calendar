@@ -312,6 +312,70 @@ describe('resolveBracket', () => {
   });
 });
 
+describe('resolveBracket with wcSlots', () => {
+  it('should override standings when wcSlots is provided', () => {
+    const standings = makeFullStandings();
+    const rankerRes = makeMockRankerResult(standings);
+    const wcSlots = {
+      'M73-home': { name: 'CustomA', logo: 'logo-ca', group: 'A' },
+      'M73-away': { name: 'CustomB', logo: 'logo-cb', group: 'B' },
+    };
+    const result = resolveBracket({}, TOURNAMENT_GRAPH, standings, rankerRes, wcSlots);
+
+    expect(result.matchups['M73'].home.name).toBe('CustomA');
+    expect(result.matchups['M73'].away.name).toBe('CustomB');
+    // Should NOT be the standings defaults (A2, B2)
+    expect(result.matchups['M73'].home.name).not.toBe('A2');
+    expect(result.matchups['M73'].away.name).not.toBe('B2');
+  });
+
+  it('should fall back to standings when wcSlots is empty for a slot', () => {
+    const standings = makeFullStandings();
+    const rankerRes = makeMockRankerResult(standings);
+    // Only override M73-home, leave M73-away empty
+    const wcSlots = {
+      'M73-home': { name: 'CustomA', logo: 'logo-ca', group: 'A' },
+    };
+    const result = resolveBracket({}, TOURNAMENT_GRAPH, standings, rankerRes, wcSlots);
+
+    expect(result.matchups['M73'].home.name).toBe('CustomA');
+    // away should fall through to standings (2°B = B2)
+    expect(result.matchups['M73'].away.name).toBe('B2');
+  });
+
+  it('should handle partial mixed wcSlots with standings and rankerResult', () => {
+    const standings = makeFullStandings();
+    const rankerRes = makeMockRankerResult(standings);
+    // Override M73-home, leave other slots untouched
+    const wcSlots = {
+      'M73-home': { name: 'CustomA', logo: 'logo-ca', group: 'A' },
+    };
+    const result = resolveBracket({}, TOURNAMENT_GRAPH, standings, rankerRes, wcSlots);
+
+    // M73-home overridden
+    expect(result.matchups['M73'].home.name).toBe('CustomA');
+    // M73-away from standings
+    expect(result.matchups['M73'].away.name).toBe('B2');
+    // M74-home from standings (1°E = E1)
+    expect(result.matchups['M74'].home.name).toBe('E1');
+    // M74-away from rankerResult
+    expect(result.matchups['M74'].away).not.toBeNull();
+  });
+
+  it('should fall through to standings when wcSlots is null/undefined', () => {
+    const standings = makeFullStandings();
+    const rankerRes = makeMockRankerResult(standings);
+
+    // No wcSlots arg (undefined)
+    const result1 = resolveBracket({}, TOURNAMENT_GRAPH, standings, rankerRes);
+    expect(result1.matchups['M73'].home.name).toBe('A2');
+
+    // wcSlots explicitly null
+    const result2 = resolveBracket({}, TOURNAMENT_GRAPH, standings, rankerRes, null);
+    expect(result2.matchups['M73'].home.name).toBe('A2');
+  });
+});
+
 describe('isThirdPlaceSlot', () => {
   it('should return true for third-place slots', () => {
     expect(isThirdPlaceSlot('M74')).toBe(true);
