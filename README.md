@@ -1,16 +1,38 @@
-# React + Vite
+# Football Calendar
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Calendario de fútbol con partidos del día, Mundial 2026 y predicciones de llaves.
 
-Currently, two official plugins are available:
+**Stack:** React 18 + Vite + Tailwind CSS + Zustand  
+**API:** [API-Football](https://www.api-sports.io/) (v3, 100 req/day free tier)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Scripts
 
-## React Compiler
+```bash
+npm run dev      # Servidor de desarrollo
+npm run build    # Build para producción
+npm run lint     # ESLint
+npm test         # Vitest
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Toggle Data Fetch
 
-## Expanding the ESLint configuration
+El fetching automático de datos (partidos en vivo, posiciones) corre cada ~30 minutos mediante GitHub Actions.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Desactivar
+
+1. Ir a **Actions** > **Toggle Data Fetch**
+2. **Run workflow** > seleccionar `pause`
+3. El schedule deja de correr
+4. Aparece "Actualizaciones desactivadas" en rojo en la página
+
+### Fetch manual (aunque esté desactivado)
+
+1. **Actions** > **fetch-football-data**
+2. **Run workflow**
+
+### Reactivar
+
+1. **Actions** > **Toggle Data Fetch**
+2. **Run workflow** > seleccionar `resume`
+3. El schedule vuelve a correr cada 30'
+4. El badge rojo desaparece
