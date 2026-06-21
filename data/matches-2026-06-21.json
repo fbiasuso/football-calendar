@@ -1,0 +1,157 @@
+[
+  {
+    "id": "1489392",
+    "title": "Ecuador vs Curaçao",
+    "date": 1782000000000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Ecuador",
+        "badge": "https://media.api-sports.io/football/teams/2382.png",
+        "id": 2382
+      },
+      "away": {
+        "name": "Curaçao",
+        "badge": "https://media.api-sports.io/football/teams/5530.png",
+        "id": 5530
+      }
+    },
+    "status": "live",
+    "score": {
+      "home": 0,
+      "away": 0
+    },
+    "minute": 75,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489394",
+    "title": "Tunisia vs Japan",
+    "date": 1782014400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Tunisia",
+        "badge": "https://media.api-sports.io/football/teams/28.png",
+        "id": 28
+      },
+      "away": {
+        "name": "Japan",
+        "badge": "https://media.api-sports.io/football/teams/12.png",
+        "id": 12
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489397",
+    "title": "Spain vs Saudi Arabia",
+    "date": 1782057600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Spain",
+        "badge": "https://media.api-sports.io/football/teams/9.png",
+        "id": 9
+      },
+      "away": {
+        "name": "Saudi Arabia",
+        "badge": "https://media.api-sports.io/football/teams/23.png",
+        "id": 23
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489395",
+    "title": "Belgium vs Iran",
+    "date": 1782068400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Belgium",
+        "badge": "https://media.api-sports.io/football/teams/1.png",
+        "id": 1
+      },
+      "away": {
+        "name": "Iran",
+        "badge": "https://media.api-sports.io/football/teams/22.png",
+        "id": 22
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489398",
+    "title": "Uruguay vs Cape Verde Islands",
+    "date": 1782079200000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Uruguay",
+        "badge": "https://media.api-sports.io/football/teams/7.png",
+        "id": 7
+      },
+      "away": {
+        "name": "Cape Verde Islands",
+        "badge": "https://media.api-sports.io/football/teams/1533.png",
+        "id": 1533
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  }
+]

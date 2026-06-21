@@ -1,0 +1,95 @@
+[
+  {
+    "id": "1489396",
+    "title": "New Zealand vs Egypt",
+    "date": 1782090000000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "New Zealand",
+        "badge": "https://media.api-sports.io/football/teams/4673.png",
+        "id": 4673
+      },
+      "away": {
+        "name": "Egypt",
+        "badge": "https://media.api-sports.io/football/teams/32.png",
+        "id": 32
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489399",
+    "title": "Argentina vs Austria",
+    "date": 1782147600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Argentina",
+        "badge": "https://media.api-sports.io/football/teams/26.png",
+        "id": 26
+      },
+      "away": {
+        "name": "Austria",
+        "badge": "https://media.api-sports.io/football/teams/775.png",
+        "id": 775
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1539017",
+    "title": "France vs Iraq",
+    "date": 1782162000000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "France",
+        "badge": "https://media.api-sports.io/football/teams/2.png",
+        "id": 2
+      },
+      "away": {
+        "name": "Iraq",
+        "badge": "https://media.api-sports.io/football/teams/1567.png",
+        "id": 1567
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  }
+]
