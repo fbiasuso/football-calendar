@@ -1,4 +1,5 @@
 // Football Calendar App
+import { useState, useEffect } from 'react';
 import { useMatches } from './hooks/useMatches.js';
 import useAppStore from './store/useAppStore.js';
 import NavBar from './components/NavBar/NavBar.jsx';
@@ -11,6 +12,16 @@ import WorldCupPage from './pages/WorldCupPage/WorldCupPage.jsx';
 function App() {
   const { matches, isLoading, error, refresh } = useMatches();
   const { error: storeError, autoPollingEnabled, setAutoPolling, currentView } = useAppStore();
+  const [fetchPaused, setFetchPaused] = useState(false);
+
+  useEffect(() => {
+    fetch('/data/status.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.dataFetchPaused) setFetchPaused(true);
+      })
+      .catch(() => {});
+  }, []);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,6 +66,12 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
+
+              {fetchPaused && (
+                <span className="text-xs font-medium text-red-600 ml-1 select-none">
+                  Actualizaciones desactivadas
+                </span>
+              )}
             </div>
           </div>
         </div>
