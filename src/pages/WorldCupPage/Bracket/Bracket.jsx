@@ -136,26 +136,26 @@ const R32_DISPLAY_BY_ID = Object.fromEntries(R32_DISPLAY.map((d) => [d.id, d]));
  * For third-place slots, the away side cycles through candidate groups with arrows.
  *
  * Props:
- *   matchupId     - R32 matchup id (e.g. 'M73')
- *   side          - 'home' | 'away'
- *   standings     - Array<{group, teams}>
- *   slotTeam      - Currently assigned team from wcSlots (or null)
- *   isActive      - Whether this side is the active (winner-picking) side
- *   onToggle      - Called when user clicks the toggle radio
- *   onPick        - Called with (matchupId, side, team) when a team card is clicked
- *   isThirdSide   - True if this side cycles through third-place candidate groups
- *   candidateGroups - Array of group letters for cycling (null if fixed)
+ *   matchupId        - R32 matchup id (e.g. 'M73')
+ *   side             - 'home' | 'away'
+ *   standings        - Array<{group, teams}>
+ *   slotTeam         - Currently assigned team from wcSlots (or null)
+ *   onPick           - Called with (matchupId, side, team) when a team card is clicked
+ *   onChangeTeam     - Called with (matchupId, side) when "Cambiar equipo" is clicked
+ *   isThirdSide      - True if this side cycles through third-place candidate groups
+ *   candidateGroups  - Array of group letters for cycling (null if fixed)
+ *   isExpanded       - True when this side has a selected team (expanded card mode)
  */
 function SlotPoolSelector({
   matchupId,
   side,
   standings,
   slotTeam,
-  isActive,
-  onToggle,
   onPick,
+  onChangeTeam,
   isThirdSide,
   candidateGroups,
+  isExpanded = false,
 }) {
   const cfg = getR32Config(matchupId);
 
@@ -185,23 +185,33 @@ function SlotPoolSelector({
     setCurrentGroupIdx((prev) => (prev < totalGroups - 1 ? prev + 1 : 0));
   }, [totalGroups]);
 
-  return (
-    <div className={`flex flex-col min-w-0 ${isActive ? '' : 'opacity-60'}`}>
-      {/* Toggle radio */}
-      <button
-        onClick={() => onToggle(side)}
-        className={`self-center mb-2 flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-all ${
-          isActive
-            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-            : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
-        }`}
-      >
-        <span className={`w-2.5 h-2.5 rounded-full border-2 ${isActive ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`} />
-        {side === 'home' ? 'Local' : 'Visitante'}
-      </button>
+  // Expanded view: selected team card at full size + "Cambiar equipo"
+  if (isExpanded && slotTeam) {
+    return (
+      <div className="flex flex-col min-w-0 items-center gap-2">
+        <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 border-blue-300 bg-blue-50 w-full">
+          {slotTeam.logo && (
+            <img src={slotTeam.logo} alt="" className="w-10 h-10 flex-shrink-0" onError={(e) => { e.target.style.display = 'none'; }} />
+          )}
+          <span className="text-sm font-semibold text-blue-800 text-center truncate w-full">
+            {slotTeam.name}
+          </span>
+          <span className="text-blue-600 text-xs">✓</span>
+        </div>
+        <button
+          onClick={() => onChangeTeam(matchupId, side)}
+          className="text-[10px] font-medium text-blue-600 hover:text-blue-800 underline"
+        >
+          Cambiar equipo
+        </button>
+      </div>
+    );
+  }
 
-      {/* Team cards */}
-      <div className={`flex flex-col gap-1.5 ${isActive ? '' : 'pointer-events-none'}`}>
+  return (
+    <div className="flex flex-col min-w-0">
+      {/* Team cards — always clickable */}
+      <div className="flex flex-col gap-1.5">
         {teams.map((team) => {
           const isSelected = slotTeam?.name === team.name && slotTeam?.group === team.group;
           return (
@@ -212,11 +222,9 @@ function SlotPoolSelector({
                 flex items-center gap-2 px-2 py-1.5 rounded-md border text-xs transition-all text-left
                 ${isSelected
                   ? 'border-blue-400 bg-blue-50 shadow-sm'
-                  : isActive
-                    ? 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'
-                    : 'border-gray-100 bg-gray-50'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'
                 }
-                ${isActive ? 'cursor-pointer' : 'cursor-default'}
+                cursor-pointer
               `}
             >
               {team.logo && (
@@ -238,7 +246,7 @@ function SlotPoolSelector({
         )}
       </div>
 
-      {/* Group indicator - for third-place cycling */}
+      {/* Group indicator - for third-place cycling (only when NOT expanded) */}
       {isThirdSide && candidateGroups && (
         <div className="flex items-center justify-center gap-2 mt-2">
           <button
@@ -280,22 +288,24 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
   const standings = externalStandings || wcStandings?.groups || wcStandings || [];
   const hasStandings = standings.length > 0;
 
+  // ── Locked mode filter: prevent user picks/slots from leaking into engine ────
+  const effectivePicks = bracketMode === 'locked' ? {} : wcPicks;
+  const effectiveSlots = bracketMode === 'locked' ? null : wcSlots;
+
   // ── Resolve full bracket via pure engine ────────────────────────────────────
   const bracketData = useMemo(() => {
     if (!hasStandings) return null;
     try {
-      // In locked mode, pass null wcSlots so engine uses standings-only
-      const slots = bracketMode === 'locked' ? null : wcSlots;
-      return resolveBracket(wcPicks, TOURNAMENT_GRAPH, standings, rankerResult || null, slots);
+      return resolveBracket(effectivePicks, TOURNAMENT_GRAPH, standings, rankerResult || null, effectiveSlots);
     } catch {
       return null;
     }
-  }, [hasStandings, wcPicks, standings, rankerResult, bracketMode, wcSlots]);
+  }, [hasStandings, effectivePicks, standings, rankerResult, effectiveSlots, bracketMode]);
 
   // ── Derive per-round state from picks + slots ────────────────────────────────
   const roundStates = useMemo(
-    () => computeRoundStates(wcPicks, TOURNAMENT_GRAPH, wcSlots),
-    [wcPicks, wcSlots],
+    () => computeRoundStates(effectivePicks, TOURNAMENT_GRAPH, effectiveSlots),
+    [wcPicks, wcSlots, bracketMode],
   );
 
   // ── Build rounds + connectors with grid positioning ─────────────────────────
@@ -415,9 +425,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
     setSelectedMatchup(null);
   };
 
-  // Slot + pick handler for R32 modal:
-  //   active side → assign slot AND set winner
-  //   inactive side → assign slot only (no winner change)
+  // Slot handler for R32 modal step 'teams': assign team to slot, don't pick winner
   const handleSlotAssign = useCallback((matchupId, side, team) => {
     const slotId = `${matchupId}-${side}`;
     const currentSlot = wcSlots[slotId];
@@ -426,24 +434,14 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
       clearWcSlot(slotId);
     } else {
       setWcSlot(slotId, team);
-      setSelectedMatchup(null);
     }
   }, [setWcSlot, clearWcSlot, wcSlots]);
 
-  const handleActiveSlotAssign = useCallback((matchupId, side, team) => {
-    const slotId = `${matchupId}-${side}`;
-    const currentSlot = wcSlots[slotId];
-    const isSameTeam = currentSlot?.name === team.name && currentSlot?.group === team.group;
-    if (isSameTeam) {
-      clearWcSlot(slotId);
-      // Clear the winner pick too, and downstream
-      setWcPick(matchupId, undefined);
-    } else {
-      setWcSlot(slotId, team);
-      setWcPick(matchupId, side);
-      setSelectedMatchup(null);
-    }
-  }, [setWcSlot, clearWcSlot, setWcPick, wcSlots]);
+  // Winner pick handler for R32 modal step 'winner': saves pick and closes modal
+  const handleWinnerPick = useCallback((matchupId, side) => {
+    setWcPick(matchupId, side);
+    setSelectedMatchup(null);
+  }, [setWcPick, setSelectedMatchup]);
 
   // ── Render a single matchup cell ────────────────────────────────────────────
   const renderCell = (m) => {
@@ -781,6 +779,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
     return renderR16PlusModal();
   };
 
+  // ── R32Modal: 2-step flow ('teams' → 'winner') ──────────────────────────────
   // R32ModalWrapper: re-creates on each selectedMatchup change via key
   const R32ModalWrapper = ({ matchup }) => <R32Modal key={matchup.id} matchup={matchup} />;
   const R32Modal = ({ matchup }) => {
@@ -793,18 +792,17 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
       ? (THIRD_PLACE_CANDIDATES[m.id]?.split('/') || [])
       : (cfg ? [cfg.awayGroup] : []);
 
-    const [activeSide, setActiveSide] = useState('home');
-
-    const handlePoolPick = (matchupId, side, team) => {
-      if (side === activeSide) {
-        handleActiveSlotAssign(matchupId, side, team);
-      } else {
-        handleSlotAssign(matchupId, side, team);
-      }
-    };
-
     const homeSlotTeam = wcSlots?.[`${m.id}-home`] || null;
     const awaySlotTeam = wcSlots?.[`${m.id}-away`] || null;
+    const hasHome = !!homeSlotTeam;
+    const hasAway = !!awaySlotTeam;
+    const showWinnerStep = hasHome && hasAway;
+
+    // "Cambiar equipo" handler: clear slot + clear winner pick + downstream
+    const handleChangeTeam = (mid, side) => {
+      clearWcSlot(`${mid}-${side}`);
+      setWcPick(mid, undefined);
+    };
 
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedMatchup(null)}>
@@ -818,50 +816,108 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
 
-          {/* Dual pool panels */}
-          <div className="flex gap-4">
-            <SlotPoolSelector
-              matchupId={m.id}
-              side="home"
-              standings={standings}
-              slotTeam={homeSlotTeam}
-              isActive={activeSide === 'home'}
-              onToggle={setActiveSide}
-              onPick={handlePoolPick}
-              isThirdSide={false}
-              candidateGroups={null}
-            />
+          {/* Step: Teams assignment */}
+          {!showWinnerStep && (
+            <>
+              <div className="flex gap-4">
+                <SlotPoolSelector
+                  matchupId={m.id}
+                  side="home"
+                  standings={standings}
+                  slotTeam={homeSlotTeam}
+                  onPick={handleSlotAssign}
+                  onChangeTeam={handleChangeTeam}
+                  isThirdSide={false}
+                  candidateGroups={null}
+                  isExpanded={hasHome}
+                />
 
-            {/* VS divider */}
-            <div className="flex flex-col items-center justify-center flex-shrink-0 w-8">
-              <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
-              {m.isSimulated && (
-                <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded mt-1">SIM</span>
-              )}
+                {/* VS divider */}
+                <div className="flex flex-col items-center justify-center flex-shrink-0 w-8">
+                  <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
+                  {m.isSimulated && (
+                    <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded mt-1">SIM</span>
+                  )}
+                </div>
+
+                <SlotPoolSelector
+                  matchupId={m.id}
+                  side="away"
+                  standings={standings}
+                  slotTeam={awaySlotTeam}
+                  onPick={handleSlotAssign}
+                  onChangeTeam={handleChangeTeam}
+                  isThirdSide={isThird}
+                  candidateGroups={isThird ? awayCandidates : null}
+                  isExpanded={hasAway}
+                />
+              </div>
+
+              {/* Footer: teams step */}
+              <div className="mt-4 text-center">
+                <span className="text-[11px] text-gray-500">
+                  Elegí los equipos del cruce
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Step: Winner pick */}
+          {showWinnerStep && (
+            <div className="flex flex-col items-center gap-4">
+              <p className="text-xs font-medium text-gray-500">Elegí el ganador del cruce</p>
+              <div className="flex items-center justify-between gap-3 w-full">
+                {/* Home team */}
+                <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                  <div
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-all w-full"
+                    onClick={() => handleWinnerPick(m.id, 'home')}
+                  >
+                    {homeSlotTeam?.logo && (
+                      <img src={homeSlotTeam.logo} alt="" className="w-10 h-10" onError={(e) => { e.target.style.display = 'none'; }} />
+                    )}
+                    <span className="text-sm font-semibold text-gray-900 truncate w-full text-center">
+                      {homeSlotTeam?.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleChangeTeam(m.id, 'home')}
+                    className="text-[10px] font-medium text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Cambiar equipo
+                  </button>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <span className="text-xs font-bold text-gray-400 uppercase">vs</span>
+                  {m.isSimulated && (
+                    <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded mt-1">SIM</span>
+                  )}
+                </div>
+
+                {/* Away team */}
+                <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                  <div
+                    className="flex flex-col items-center gap-2 p-3 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-all w-full"
+                    onClick={() => handleWinnerPick(m.id, 'away')}
+                  >
+                    {awaySlotTeam?.logo && (
+                      <img src={awaySlotTeam.logo} alt="" className="w-10 h-10" onError={(e) => { e.target.style.display = 'none'; }} />
+                    )}
+                    <span className="text-sm font-semibold text-gray-900 truncate w-full text-center">
+                      {awaySlotTeam?.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleChangeTeam(m.id, 'away')}
+                    className="text-[10px] font-medium text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Cambiar equipo
+                  </button>
+                </div>
+              </div>
             </div>
-
-            <SlotPoolSelector
-              matchupId={m.id}
-              side="away"
-              standings={standings}
-              slotTeam={awaySlotTeam}
-              isActive={activeSide === 'away'}
-              onToggle={setActiveSide}
-              onPick={handlePoolPick}
-              isThirdSide={isThird}
-              candidateGroups={isThird ? awayCandidates : null}
-            />
-          </div>
-
-          {/* Footer info */}
-          <div className="mt-4 text-center">
-            <span className="text-[11px] text-gray-500">
-              {activeSide === 'home'
-                ? 'Hacé click en un equipo de LOCAL para asignarlo y declararlo ganador'
-                : 'Hacé click en un equipo de VISITANTE para asignarlo y declararlo ganador'
-              }
-            </span>
-          </div>
+          )}
         </div>
       </div>
     );

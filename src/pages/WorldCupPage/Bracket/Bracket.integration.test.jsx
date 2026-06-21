@@ -8,18 +8,46 @@ afterEach(cleanup);
 // ── Mock setup ────────────────────────────────────────────────────────────────
 
 // We mock useAppStore to control wcPicks, wcStandings, wcSlots
-const mockStore = vi.hoisted(() => ({
-  wcStandings: null,
-  wcPicks: {},
-  setWcPick: vi.fn(),
-  clearWcPicks: vi.fn(),
-  bracketMode: 'locked',
-  setBracketMode: vi.fn(),
-  wcSlots: {},
-  setWcSlot: vi.fn(),
-  clearWcSlot: vi.fn(),
-  clearAllWcSlots: vi.fn(),
-}));
+const mockStore = vi.hoisted(() => {
+  const store = {
+    wcStandings: null,
+    wcPicks: {},
+    setWcPick: vi.fn(),
+    clearWcPicks: vi.fn(),
+    bracketMode: 'locked',
+    setBracketMode: vi.fn(),
+    wcSlots: {},
+    setWcSlot: vi.fn(),
+    clearWcSlot: vi.fn(),
+    clearAllWcSlots: vi.fn(),
+  };
+  // Make actions actually update state so the component re-reads them on next render
+  store.setWcSlot = vi.fn((slotId, team) => {
+    store.wcSlots = { ...store.wcSlots, [slotId]: team };
+  });
+  store.clearWcSlot = vi.fn((slotId) => {
+    const newSlots = { ...store.wcSlots };
+    delete newSlots[slotId];
+    store.wcSlots = newSlots;
+  });
+  store.clearAllWcSlots = vi.fn(() => {
+    store.wcSlots = {};
+  });
+  store.clearWcPicks = vi.fn(() => {
+    store.wcPicks = {};
+  });
+  store.setWcPick = vi.fn((matchupId, side) => {
+    if (side === undefined) {
+      // Clearing a pick — store as undefined (matches setWcPick behavior with undefined arg)
+      const newPicks = { ...store.wcPicks };
+      delete newPicks[matchupId];
+      store.wcPicks = newPicks;
+    } else {
+      store.wcPicks = { ...store.wcPicks, [matchupId]: side };
+    }
+  });
+  return store;
+});
 
 vi.mock('../../../store/useAppStore.js', () => ({
   default: vi.fn((selector) => {
@@ -188,7 +216,7 @@ describe('Bracket — modal interaction', () => {
     expect(screen.getByText('M74')).toBeInTheDocument();
   });
 
-  it('should call setWcPick when a team card is clicked in the modal', () => {
+  it('should call setWcSlot (not setWcPick) when selecting a team in teams step', () => {
     mockStore.bracketMode = 'editing';
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
@@ -197,20 +225,17 @@ describe('Bracket — modal interaction', () => {
     const elegirEls = document.querySelectorAll('[role="button"]');
     fireEvent.click(elegirEls[0]);
 
-    // The modal should now be visible showing M74
+    // Modal should show M74
     expect(screen.getByText('M74')).toBeInTheDocument();
 
-    // The modal has team buttons — find the cursor-pointer team buttons in the modal
-    // In the R32 modal, the team cards are buttons with cursor-pointer class
-    const teamButtons = document.querySelectorAll('.fixed [class*="cursor-pointer"]');
-    expect(teamButtons.length).toBeGreaterThanOrEqual(1);
+    // Find team buttons in the modal (home pool: E1, E2, E3, E4)
+    const e1Btn = screen.getByText('E1');
+    expect(e1Btn).toBeInTheDocument();
+    fireEvent.click(e1Btn);
 
-    // Click the first cursor-pointer team card (home team E1 from Group E)
-    fireEvent.click(teamButtons[0]);
-
-    // Should call setWcSlot and setWcPick (active side = home)
+    // Should call setWcSlot but NOT setWcPick (step 'teams' only assigns slot)
     expect(mockStore.setWcSlot).toHaveBeenCalledWith('M74-home', expect.objectContaining({ name: 'E1' }));
-    expect(mockStore.setWcPick).toHaveBeenCalledWith('M74', 'home');
+    expect(mockStore.setWcPick).not.toHaveBeenCalled();
   });
 
   it('should open read-only modal when clicking R32 cell in locked mode', () => {
@@ -433,9 +458,188 @@ describe('Bracket — locked mode read-only', () => {
 
     // Modal shows read-only content
     expect(screen.getByText('M73')).toBeInTheDocument();
-    // No "Local" / "Visitante" toggle buttons (present in R32 modal)
+    // No "Local" / "Visitante" toggle buttons (removed in new design)
     expect(screen.queryByText('Local')).toBeNull();
     expect(screen.queryByText('Visitante')).toBeNull();
+  });
+});
+
+describe('Bracket — R32 modal 2-step flow', () => {
+  it('should show step "teams" with both pools on initial open', () => {
+    mockStore.bracketMode = 'editing';
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click first R32 cell (M74)
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+
+    // Modal shows "Elegí los equipos del cruce" (teams step)
+    expect(screen.getByText('Elegí los equipos del cruce')).toBeInTheDocument();
+    // Home pool shows Group E teams
+    expect(screen.getByText('E1')).toBeInTheDocument();
+    expect(screen.getByText('E2')).toBeInTheDocument();
+    // Away pool shows Group A teams (first candidate group for M74)
+    expect(screen.getByText('A1')).toBeInTheDocument();
+    // No "Cambiar equipo" button yet (no teams selected)
+    expect(screen.queryByText('Cambiar equipo')).toBeNull();
+  });
+
+  it('should show expanded card and "Cambiar equipo" when a slot is set', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+    };
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+
+    // Home side should show expanded card with "Cambiar equipo"
+    expect(screen.getByText('Cambiar equipo')).toBeInTheDocument();
+  });
+
+  it('should hide third-place arrow buttons after team selection on third side', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {};
+    const standings = makeFullStandings();
+    const { rerender } = render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell (third-place slot — away side has arrows)
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+
+    // Initially, arrows should be visible (away side cycles groups)
+    const arrows = document.querySelectorAll('[aria-label="Grupo anterior"], [aria-label="Grupo siguiente"]');
+    expect(arrows.length).toBeGreaterThanOrEqual(2);
+
+    // Set a slot for the away side via mockStore and rerender
+    mockStore.wcSlots = {
+      'M74-away': { name: 'A3', logo: null, group: 'A' },
+    };
+    rerender(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Arrows should now be hidden (away side is expanded)
+    const arrowsAfter = document.querySelectorAll('[aria-label="Grupo anterior"], [aria-label="Grupo siguiente"]');
+    expect(arrowsAfter.length).toBe(0);
+  });
+
+  it('should show grid view when slot is cleared (collapsed)', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+    };
+    const standings = makeFullStandings();
+    const { rerender } = render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell → modal shows expanded card with "Cambiar equipo"
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+    expect(screen.getByText('Cambiar equipo')).toBeInTheDocument();
+
+    // Click "Cambiar equipo" — mock's clearWcSlot updates mockStore.wcSlots
+    fireEvent.click(screen.getByText('Cambiar equipo'));
+    expect(mockStore.clearWcSlot).toHaveBeenCalledWith('M74-home');
+
+    // Re-render so component reads cleared wcSlots
+    rerender(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Should see the grid view again (E2 visible in the pool)
+    expect(screen.getByText('E2')).toBeInTheDocument();
+  });
+
+  it('should transition to winner step when both slots are set', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+      'M74-away': { name: 'A3', logo: null, group: 'A' },
+    };
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+
+    // Winner step should be shown directly
+    expect(screen.getByText('Elegí el ganador del cruce')).toBeInTheDocument();
+    // Both teams visible as clickable cards in the winner view
+    expect(screen.getAllByText('E1').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('A3').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should call setWcPick and close modal when winner is picked', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+      'M74-away': { name: 'A3', logo: null, group: 'A' },
+    };
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell → winner step shown
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+    expect(screen.getByText('Elegí el ganador del cruce')).toBeInTheDocument();
+
+    // Click E1 in the winner view to pick it as winner
+    const e1Cards = screen.getAllByText('E1');
+    // Click the E1 inside the winner view (the clickable card, not bracket cell)
+    // Both the bracket cell and winner card show E1; clicking any triggers handleWinnerPick
+    fireEvent.click(e1Cards[0]);
+
+    // Should call setWcPick with M74 and 'home'
+    expect(mockStore.setWcPick).toHaveBeenCalledWith('M74', 'home');
+    // Modal should close (handleWinnerPick calls setSelectedMatchup(null))
+    expect(screen.queryByText('Elegí el ganador del cruce')).toBeNull();
+  });
+
+  it('should show winner step directly when re-opening with existing slots', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+      'M74-away': { name: 'A3', logo: null, group: 'A' },
+    };
+    const standings = makeFullStandings();
+    render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+
+    // Should open directly to winner step
+    expect(screen.getByText('Elegí el ganador del cruce')).toBeInTheDocument();
+    // "Cambiar equipo" should be available for both sides
+    const cambiarBtns = screen.getAllByText('Cambiar equipo');
+    expect(cambiarBtns.length).toBe(2);
+  });
+
+  it('should go back to teams step when slot is cleared in winner step', () => {
+    mockStore.bracketMode = 'editing';
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+      'M74-away': { name: 'A3', logo: null, group: 'A' },
+    };
+    const standings = makeFullStandings();
+    const { rerender } = render(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Click M74 cell → winner step
+    const buttons = document.querySelectorAll('[role="button"]');
+    fireEvent.click(buttons[0]);
+    expect(screen.getByText('Elegí el ganador del cruce')).toBeInTheDocument();
+
+    // Clear one slot via mockStore and rerender
+    mockStore.wcSlots = {
+      'M74-home': { name: 'E1', logo: null, group: 'E' },
+    };
+    rerender(<Bracket standings={standings} loading={false} rankerResult={null} />);
+
+    // Should go back to teams step
+    expect(screen.getByText('Elegí los equipos del cruce')).toBeInTheDocument();
+    // Home side still expanded, away side shows grid (A2 should be visible)
+    expect(screen.getByText('A2')).toBeInTheDocument();
   });
 });
 
