@@ -21,8 +21,8 @@ export default function ThirdPlaceTable({ standings }) {
   }
 
   return (
-    <div className="mt-8">
-      <h3 className="text-base font-bold text-gray-700 mb-3">
+    <div className="mt-8 mx-auto max-w-xl">
+      <h3 className="text-base font-bold text-gray-700 mb-3 text-center">
         Ranking de terceros lugares
       </h3>
       <div className="overflow-x-auto">

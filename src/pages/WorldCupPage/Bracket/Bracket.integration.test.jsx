@@ -261,8 +261,8 @@ describe('Bracket — editing mode', () => {
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // Default: locked mode shows "Editar predicciones" button
-    const toggleBtn = screen.getByText('✏️ Editar predicciones');
+    // Default: locked mode shows "Simular cruces" button
+    const toggleBtn = screen.getByText('Simular cruces');
     expect(toggleBtn).toBeInTheDocument();
 
     // Simulate clicking the toggle (the mock just tracks calls)
@@ -270,13 +270,13 @@ describe('Bracket — editing mode', () => {
     expect(mockStore.setBracketMode).toHaveBeenCalledWith('editing');
   });
 
-  it('should show "Editar predicciones" in locked mode and "Bloquear" in editing mode', () => {
+  it('should show "Simular cruces" in locked mode and "Volver a Cruces Reales" in editing mode', () => {
     mockStore.bracketMode = 'editing';
     const standings = makeFullStandings();
     render(<Bracket standings={standings} loading={false} rankerResult={null} />);
 
-    // In editing mode, the toggle should show "Bloquear"
-    expect(screen.getByText('🔒 Bloquear')).toBeInTheDocument();
+    // In editing mode, the toggle should show "Volver a Cruces Reales"
+    expect(screen.getByText('Volver a Cruces Reales')).toBeInTheDocument();
   });
 });
 

@@ -498,9 +498,8 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         key={`cell-${m.roundIndex}-${m.matchupIndex}`}
         className={`
           matchup-cell flex flex-col justify-center relative
-          ${m.isThirdPlace ? 'border-orange-200' : 'border-gray-200'}
-          ${cellClickable && m.roundIndex === 0 ? 'cursor-pointer hover:border-blue-300 hover:shadow-sm' : ''}
-          ${cellClickable && m.roundIndex > 0 ? 'cursor-pointer hover:border-gray-300' : ''}
+          border-blue-200
+          ${cellClickable ? 'cursor-pointer hover:border-orange-300 hover:shadow-sm' : ''}
           ${!isClickable && !m.isPlaceholder ? 'opacity-50' : ''}
           ${isLockedRound ? 'opacity-40 pointer-events-none' : ''}
           bg-white border rounded-md px-1.5 py-1 transition-all text-xs
@@ -548,9 +547,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           </span>
           {isPickedAway && (
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" title="Pickeado" />
-          )}
-          {m.isSimulated && (
-            <span className="text-[9px] text-orange-600 bg-orange-100 px-1 rounded font-bold ml-auto flex-shrink-0">SIM</span>
           )}
         </div>
       </div>
@@ -814,6 +810,8 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
 
+          {/* Steps wrapper — fixed min-height prevents layout jump */}
+          <div className="min-h-[240px]">
           {/* Step: Teams assignment */}
           {!showWinnerStep && (
             <>
@@ -920,6 +918,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
               </div>
             </div>
           )}
+          </div>{/* end min-h[240px] wrapper */}
         </div>
       </div>
     );
@@ -960,7 +959,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
   const slotCount = Object.keys(wcSlots).length;
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
       {renderModal()}
 
       {/* Champion banner */}
@@ -983,7 +982,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
               : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
           }`}
         >
-          {bracketMode === 'editing' ? '🔒 Bloquear' : '✏️ Editar predicciones'}
+          {bracketMode === 'editing' ? 'Volver a Cruces Reales' : 'Simular cruces'}
         </button>
         <button
           onClick={() => { clearWcPicks(); clearAllWcSlots(); setSelectedMatchup(null); }}
@@ -1010,7 +1009,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
       </div>
 
       {/* Bracket grid — 9 columns: R32 | C | R16 | C | QF | C | SF | C | F */}
-      <div className="overflow-x-auto pb-4">
+      <div className="overflow-x-auto">
         <div
           className="grid min-w-[700px]"
           style={{
@@ -1029,7 +1028,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                   ? 'text-green-700 border-b-2 border-green-400 bg-green-50'
                   : 'text-gray-400 border-b border-gray-200';
             const stateIcon =
-              state === 'completed' ? ' ✓' : state === 'locked' ? ' 🔒' : '';
+              state === 'completed' ? ' ✓' : '';
 
             return (
               <div
