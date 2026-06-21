@@ -1,14 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'fs';
+import { describe, it, expect, afterAll } from 'vitest';
+import { rmSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { tmpdir } from 'os';
-
-// We'll test storage functions by temporarily re-routing to a temp directory
-// Since storage.js uses a hardcoded DATA_DIR, we test the functions by
-// using the underlying loadJSON/saveJSON/hasChanges after modifying
-// the module's behaviour via the file system
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 import { hasChanges, loadJSON, saveJSON, saveMatches } from '../storage.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = join(__dirname, '..', '..', '..', 'data');
+
+// Clean up test artifacts after all tests
+afterAll(() => {
+  if (existsSync(DATA_DIR)) {
+    const testFiles = readdirSync(DATA_DIR)
+      .filter(f => f.startsWith('__test_') || f.startsWith('matches-test-'));
+    for (const f of testFiles) {
+      rmSync(join(DATA_DIR, f), { force: true });
+    }
+  }
+});
 
 describe('hasChanges', () => {
   it('returns false for identical objects', () => {

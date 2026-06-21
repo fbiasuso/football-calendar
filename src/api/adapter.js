@@ -18,7 +18,7 @@ let staticMode = null; // null=unsure, true=static, false=live (cached after fir
 async function tryFetchStatic(path) {
   try {
     const res = await fetch(`${STATIC_BASE}/${path}`);
-    if (res.ok) return res.json();
+    if (res.ok) return await res.json();
   } catch {
     // Network error — silent fail, will fall back to API
   }
