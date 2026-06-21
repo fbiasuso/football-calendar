@@ -145,10 +145,10 @@
     },
     "status": "live",
     "score": {
-      "home": 0,
-      "away": 0
+      "home": 2,
+      "away": 2
     },
-    "minute": 18,
+    "minute": 87,
     "round": "Group Stage - 2",
     "matchday": null,
     "isKnockout": false,
