@@ -12,6 +12,8 @@ const TODAY = new Date();
 const TOMORROW = new Date(TODAY.getTime() + 24 * 60 * 60 * 1000);
 const YESTERDAY = new Date(TODAY.getTime() - 24 * 60 * 60 * 1000);
 
+const GH_PAGES_BASE = 'https://fbiasuso.github.io/football-calendar/data';
+
 /**
  * Get the mode from env or auto-detect from current date
  * @returns {'worldcup'|'leagues'}
@@ -42,12 +44,35 @@ function getKnownFixtures() {
   return fixtures;
 }
 
+/**
+ * Load previous meta.json — first from local (if data/ exists in checkout),
+ * then fall back to gh-pages URL so the scheduler can see nextPlanned
+ * even when data/ is gitignored on the main branch.
+ * @returns {Object|null}
+ */
+async function loadPreviousMeta() {
+  const local = loadJSON('meta.json');
+  if (local) return local;
+
+  try {
+    const res = await fetch(`${GH_PAGES_BASE}/meta.json`);
+    if (res.ok) {
+      const remote = await res.json();
+      console.log('[fetch-data] Loaded meta from gh-pages fallback');
+      return remote;
+    }
+  } catch {
+    // gh-pages might not be deployed yet — silent fallback
+  }
+  return null;
+}
+
 async function main() {
   const mode = detectMode();
   console.log(`[fetch-data] Mode: ${mode}, Time: ${TODAY.toISOString()}`);
 
-  // Load previous meta
-  const meta = loadJSON('meta.json');
+  // Load previous meta (local or gh-pages fallback)
+  const meta = await loadPreviousMeta();
   const lastFetched = meta?.lastFetched ? new Date(meta.lastFetched) : null;
 
   // Get known fixtures from saved data
@@ -125,8 +150,20 @@ async function main() {
       changed = true;
     }
 
-    // Fetch standings (always in World Cup mode, or if schedule says so)
-    if (schedule.endpoints.includes('standings') || mode === 'worldcup') {
+    // Fetch standings when included in schedule endpoints,
+    // or once every 4h in World Cup mode to keep group tables fresh
+    let standingsFetched = false;
+    if (schedule.endpoints.includes('standings')) {
+      standingsFetched = true;
+    } else if (mode === 'worldcup') {
+      const lastSf = meta?.lastStandingsFetch;
+      const hoursSince = lastSf
+        ? (Date.now() - new Date(lastSf).getTime()) / (60 * 60 * 1000)
+        : 99;
+      if (hoursSince >= 4) standingsFetched = true;
+    }
+
+    if (standingsFetched) {
       console.log('[fetch-data] Fetching World Cup standings...');
       const standings = await getStandings(1, 2026);
       const standingsChanged = saveStandings(standings);
@@ -154,6 +191,9 @@ async function main() {
     // Save meta on every successful fetch (timestamp always reflects last run)
     const newMeta = {
       lastFetched: TODAY.toISOString(),
+      lastStandingsFetch: standingsFetched
+        ? TODAY.toISOString()
+        : (meta?.lastStandingsFetch || TODAY.toISOString()),
       dataChanged: changed,
       source: 'api-football',
       mode,

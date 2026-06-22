@@ -72,6 +72,23 @@ export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }
   const hasLive = hasLiveMatches(knownFixtures);
   const nextMatch = getNextMatchTime(knownFixtures, now);
 
+  // --- nextPlanned check (skip if not yet due) ---
+  // The previous run stores nextPlanned in meta.json so subsequent runs
+  // don't over-fetch when cron triggers faster than the intended interval.
+  if (meta?.nextPlanned) {
+    const planned = new Date(meta.nextPlanned);
+    if (now < planned) {
+      const diffMin = Math.round((planned.getTime() - now.getTime()) / 60000);
+      reasons.push(`antes del próximo fetch planificado (en ${diffMin} min)`);
+      return {
+        shouldFetch: false,
+        reasons,
+        nextPlanned: planned,
+        endpoints: [],
+      };
+    }
+  }
+
   // --- Off-hours schedule refresh (both modes) ---
   // Between 4:00 and 6:00 AM ART, do one daily schedule refresh
   if (artHour >= 4 && artHour <= 6) {
@@ -116,59 +133,33 @@ export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }
       };
     }
 
-    // In active window: check fixtures
-    if (!knownFixtures || knownFixtures.length === 0) {
-      // No fixtures known — check every 4h or fetch immediately on first run
-      const lastFetchTime = lastFetched ? new Date(lastFetched) : null;
-      const hoursSinceLastFetch = lastFetchTime
-        ? (now.getTime() - lastFetchTime.getTime()) / (60 * 60 * 1000)
-        : 99; // first run: always fetch
-
-      if (hoursSinceLastFetch >= 4) {
-        reasons.push('worldcup: sin fixtures, chequeando si aparecieron');
-        endpoints.push('fixtures');
+    // In active window: if we have fixtures, use match-aware intervals
+    if (knownFixtures && knownFixtures.length > 0) {
+      if (hasLive) {
+        reasons.push('worldcup: live match → 15min interval');
+        endpoints.push('fixtures', 'live');
+        if (endpoints.indexOf('standings') === -1) endpoints.push('standings');
         return {
           shouldFetch: true,
           reasons,
-          nextPlanned: new Date(now.getTime() + 4 * 60 * 60 * 1000),
+          nextPlanned: new Date(now.getTime() + 15 * 60 * 1000),
           endpoints,
         };
       }
 
-      reasons.push(`worldcup: sin fixtures, último fetch ${hoursSinceLastFetch.toFixed(1)}h atrás`);
-      return {
-        shouldFetch: false,
-        reasons,
-        nextPlanned: new Date(now.getTime() + 60 * 60 * 1000),
-        endpoints: [],
-      };
+      if (nextMatch && (nextMatch.getTime() - now.getTime()) < 2 * 60 * 60 * 1000) {
+        reasons.push('worldcup: próximo partido < 2h → 30min interval');
+        endpoints.push('fixtures');
+        return {
+          shouldFetch: true,
+          reasons,
+          nextPlanned: new Date(now.getTime() + 30 * 60 * 1000),
+          endpoints,
+        };
+      }
     }
 
-    // Determine interval based on match proximity
-    if (hasLive) {
-      reasons.push('worldcup: live match → 15min interval');
-      endpoints.push('fixtures', 'live');
-      if (endpoints.indexOf('standings') === -1) endpoints.push('standings');
-      return {
-        shouldFetch: true,
-        reasons,
-        nextPlanned: new Date(now.getTime() + 15 * 60 * 1000),
-        endpoints,
-      };
-    }
-
-    if (nextMatch && (nextMatch.getTime() - now.getTime()) < 2 * 60 * 60 * 1000) {
-      reasons.push('worldcup: próximo partido < 2h → 30min interval');
-      endpoints.push('fixtures');
-      return {
-        shouldFetch: true,
-        reasons,
-        nextPlanned: new Date(now.getTime() + 30 * 60 * 1000),
-        endpoints,
-      };
-    }
-
-    // Default: every 2h
+    // Default: every 2h (also covers the "no local fixtures" case)
     reasons.push('worldcup: default → 2h interval');
     endpoints.push('fixtures');
     return {
