@@ -35,7 +35,7 @@ function App() {
       .catch(() => setIsStaticMode(false));
 
     // Also check fetchPaused from status.json
-    fetch('/data/status.json')
+    fetch(`${import.meta.env.BASE_URL}data/status.json`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (d?.dataFetchPaused) setFetchPaused(true);

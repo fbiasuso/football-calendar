@@ -49,10 +49,11 @@ export function computeRoundStates(wcPicks, graph, wcSlots) {
 const ROUND_OFFSETS = [0, 1, 3, 7, 15];
 
 function rowStart(round, idx) {
+  if (round === 4) return 21; // Final: centered between SF-M1 (rows 10-25) and SF-M2 (rows 26-41)
   return idx * Math.pow(2, round + 1) + 3 + ROUND_OFFSETS[round];
 }
 function rowSpan(round) {
-  return Math.pow(2, round + 1);
+  return round === 4 ? 4 : Math.pow(2, round + 1);
 }
 
 /** Parse "1°A" → { rank: 1, group: 'A' } */
@@ -115,6 +116,46 @@ const R32_DISPLAY = [
 ];
 
 const R32_DISPLAY_BY_ID = Object.fromEntries(R32_DISPLAY.map((d) => [d.id, d]));
+
+/** Dates for all bracket matchups (R32 + R16 + QF + SF + Final) */
+const MATCH_DATES = {
+  // R32 — from R32_DISPLAY
+  'M73': 'dom, 28 jun, 16:00',
+  'M74': 'lun, 29 jun, 17:30',
+  'M75': 'lun, 29 jun, 22:00',
+  'M76': 'lun, 29 jun, 14:00',
+  'M77': 'mar, 30 jun, 18:00',
+  'M78': 'mar, 30 jun, 14:00',
+  'M79': 'mar, 30 jun, 22:00',
+  'M80': 'mié, 1 jul, 13:00',
+  'M81': 'mié, 1 jul, 21:00',
+  'M82': 'mié, 1 jul, 17:00',
+  'M83': 'jue, 2 jul, 20:00',
+  'M84': 'jue, 2 jul, 16:00',
+  'M85': 'vie, 3 jul, 0:00',
+  'M86': 'vie, 3 jul, 19:00',
+  'M87': 'vie, 3 jul, 22:30',
+  'M88': 'vie, 3 jul, 15:00',
+  // R16 (Octavos)
+  'R16-M1': 'sáb, 4 jul, 18:00',
+  'R16-M2': 'sáb, 4 jul, 14:00',
+  'R16-M3': 'lun, 6 jul, 16:00',
+  'R16-M4': 'lun, 6 jul, 21:00',
+  'R16-M5': 'dom, 5 jul, 17:00',
+  'R16-M6': 'dom, 5 jul, 21:00',
+  'R16-M7': 'mar, 7 jul, 13:00',
+  'R16-M8': 'mar, 7 jul, 17:00',
+  // QF (Cuartos)
+  'QF-M1': 'jue, 9 jul, 17:00',
+  'QF-M2': 'vie, 10 jul, 16:00',
+  'QF-M3': 'sáb, 11 jul, 18:00',
+  'QF-M4': 'sáb, 11 jul, 22:00',
+  // SF (Semis)
+  'SF-M1': 'mar, 14 jul, 16:00',
+  'SF-M2': 'mié, 15 jul, 16:00',
+  // Final
+  'F-M1': 'dom, 19 jul, 16:00',
+};
 
 // ── SlotPoolSelector component ──────────────────────────────────────────────
 /**
@@ -504,7 +545,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         style={{
           gridRow: m.gridRow,
           gridColumn: m.gridCol,
-          height: '52px',
         }}
         onClick={() => {
           if (cellClickable) setSelectedMatchup(m);
@@ -595,7 +635,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           <div className="flex justify-between items-center mb-3">
             <div>
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{m.id}</h3>
-              {display?.date && <p className="text-xs text-gray-500 mt-0.5">{display.date}</p>}
+              {MATCH_DATES[m.id] && <p className="text-xs text-gray-500 mt-0.5">{MATCH_DATES[m.id]}</p>}
             </div>
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
@@ -700,7 +740,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           <div className="flex justify-between items-center mb-3">
             <div>
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{m.id}</h3>
-              {display?.date && <p className="text-xs text-gray-500 mt-0.5">{display.date}</p>}
+              {MATCH_DATES[m.id] && <p className="text-xs text-gray-500 mt-0.5">{MATCH_DATES[m.id]}</p>}
             </div>
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
@@ -799,7 +839,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           <div className="flex justify-between items-center mb-3">
             <div>
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{m.id}</h3>
-              {display?.date && <p className="text-xs text-gray-500 mt-0.5">{display.date}</p>}
+              {MATCH_DATES[m.id] && <p className="text-xs text-gray-500 mt-0.5">{MATCH_DATES[m.id]}</p>}
             </div>
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
@@ -1005,7 +1045,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           className="grid min-w-[700px]"
           style={{
             gridTemplateColumns: 'minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr)',
-            gridTemplateRows: '32px 28px repeat(47, 28px)',
+            gridTemplateRows: '32px 28px repeat(39, 28px)',
           }}
         >
           {/* Round headers */}
