@@ -1,0 +1,157 @@
+[
+  {
+    "id": "1489401",
+    "title": "Norway vs Senegal",
+    "date": 1782172800000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Norway",
+        "badge": "https://media.api-sports.io/football/teams/1090.png",
+        "id": 1090
+      },
+      "away": {
+        "name": "Senegal",
+        "badge": "https://media.api-sports.io/football/teams/13.png",
+        "id": 13
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489400",
+    "title": "Jordan vs Algeria",
+    "date": 1782183600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Jordan",
+        "badge": "https://media.api-sports.io/football/teams/1548.png",
+        "id": 1548
+      },
+      "away": {
+        "name": "Algeria",
+        "badge": "https://media.api-sports.io/football/teams/1532.png",
+        "id": 1532
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489404",
+    "title": "Portugal vs Uzbekistan",
+    "date": 1782234000000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Portugal",
+        "badge": "https://media.api-sports.io/football/teams/27.png",
+        "id": 27
+      },
+      "away": {
+        "name": "Uzbekistan",
+        "badge": "https://media.api-sports.io/football/teams/1568.png",
+        "id": 1568
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489402",
+    "title": "England vs Ghana",
+    "date": 1782244800000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "England",
+        "badge": "https://media.api-sports.io/football/teams/10.png",
+        "id": 10
+      },
+      "away": {
+        "name": "Ghana",
+        "badge": "https://media.api-sports.io/football/teams/1504.png",
+        "id": 1504
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489403",
+    "title": "Panama vs Croatia",
+    "date": 1782255600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Panama",
+        "badge": "https://media.api-sports.io/football/teams/11.png",
+        "id": 11
+      },
+      "away": {
+        "name": "Croatia",
+        "badge": "https://media.api-sports.io/football/teams/3.png",
+        "id": 3
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  }
+]

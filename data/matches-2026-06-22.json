@@ -19,12 +19,12 @@
         "id": 32
       }
     },
-    "status": "pending",
+    "status": "live",
     "score": {
-      "home": null,
-      "away": null
+      "home": 1,
+      "away": 0
     },
-    "minute": null,
+    "minute": 41,
     "round": "Group Stage - 2",
     "matchday": null,
     "isKnockout": false,

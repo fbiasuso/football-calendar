@@ -448,17 +448,31 @@
         "name": "Uruguay",
         "logo": "https://media.api-sports.io/football/teams/7.png",
         "teamId": 7,
-        "points": 1,
-        "played": 1,
+        "points": 2,
+        "played": 2,
         "wins": 0,
-        "draws": 1,
+        "draws": 2,
         "losses": 0,
-        "goalsFor": 1,
-        "goalsAgainst": 1,
+        "goalsFor": 3,
+        "goalsAgainst": 3,
         "goalDiff": 0
       },
       {
         "rank": 3,
+        "name": "Cape Verde Islands",
+        "logo": "https://media.api-sports.io/football/teams/1533.png",
+        "teamId": 1533,
+        "points": 2,
+        "played": 2,
+        "wins": 0,
+        "draws": 2,
+        "losses": 0,
+        "goalsFor": 2,
+        "goalsAgainst": 2,
+        "goalDiff": 0
+      },
+      {
+        "rank": 4,
         "name": "Saudi Arabia",
         "logo": "https://media.api-sports.io/football/teams/23.png",
         "teamId": 23,
@@ -470,20 +484,6 @@
         "goalsFor": 1,
         "goalsAgainst": 5,
         "goalDiff": -4
-      },
-      {
-        "rank": 4,
-        "name": "Cape Verde Islands",
-        "logo": "https://media.api-sports.io/football/teams/1533.png",
-        "teamId": 1533,
-        "points": 1,
-        "played": 1,
-        "wins": 0,
-        "draws": 1,
-        "losses": 0,
-        "goalsFor": 0,
-        "goalsAgainst": 0,
-        "goalDiff": 0
       }
     ]
   },
