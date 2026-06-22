@@ -151,23 +151,19 @@ async function main() {
       }
     }
 
-    // Save meta only if actual match/standings data changed
-    // Avoids unnecessary commits when only the timestamp changes
-    if (changed) {
-      const newMeta = {
-        lastFetched: TODAY.toISOString(),
-        source: 'api-football',
-        mode,
-        nextPlanned: schedule.nextPlanned.toISOString(),
-        endpointsUsed: schedule.endpoints,
-        fixturesToday: knownFixtures.length,
-        liveNow: knownFixtures.filter(m => m.status === 'live').length,
-      };
-      saveMeta(newMeta);
-      console.log('[fetch-data] Data updated successfully');
-    } else {
-      console.log('[fetch-data] No changes detected — skipping commit');
-    }
+    // Save meta on every successful fetch (timestamp always reflects last run)
+    const newMeta = {
+      lastFetched: TODAY.toISOString(),
+      dataChanged: changed,
+      source: 'api-football',
+      mode,
+      nextPlanned: schedule.nextPlanned.toISOString(),
+      endpointsUsed: schedule.endpoints,
+      fixturesToday: knownFixtures.length,
+      liveNow: knownFixtures.filter(m => m.status === 'live').length,
+    };
+    saveMeta(newMeta);
+    console.log(`[fetch-data] Meta saved (dataChanged: ${changed})`);
 
     process.exit(0);
   } catch (error) {
