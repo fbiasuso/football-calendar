@@ -7,6 +7,12 @@
 import { getSchedule, isWorldCupPeriod } from './schedule.js';
 import { getMatches, getLiveMatches, getStandings, getRounds, formatDate } from './lib/api.js';
 import { loadJSON, saveMatches, saveStandings, saveSchedule, saveMeta, hasChanges } from './lib/storage.js';
+import { existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = join(__dirname, '..', 'data');
 
 const TODAY = new Date();
 const TOMORROW = new Date(TODAY.getTime() + 24 * 60 * 60 * 1000);
@@ -70,6 +76,11 @@ async function loadPreviousMeta() {
 async function main() {
   const mode = detectMode();
   console.log(`[fetch-data] Mode: ${mode}, Time: ${TODAY.toISOString()}`);
+
+  // Ensure data/ exists before anything else — the peaceiris deploy step needs it
+  if (!existsSync(DATA_DIR)) {
+    mkdirSync(DATA_DIR, { recursive: true });
+  }
 
   // Load previous meta (local or gh-pages fallback)
   const meta = await loadPreviousMeta();
