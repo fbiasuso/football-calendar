@@ -36,3 +36,17 @@ El fetching automático de datos (partidos en vivo, posiciones) corre cada ~30 m
 2. **Run workflow** > seleccionar `resume`
 3. El schedule vuelve a correr cada 30'
 4. El badge rojo desaparece
+
+## Static Mode (gh-pages)
+
+En producción (GitHub Pages), los datos se sirven desde archivos estáticos generados por el workflow cada ~30 min. Como no hay API en tiempo real, el frontend **simula el estado de los partidos** según su horario de inicio:
+
+- Si `hora actual < hora del partido` → `pending`
+- Si `hora actual` está dentro de la ventana de 111 min (45+3+15+45+3) → **EN VIVO**
+- Si pasó la ventana → `FINALIZADO`
+
+Si el archivo estático ya contiene datos reales (`live` con minuto, o `finished`), esos tienen prioridad sobre la simulación. Esto permite que partidos de playoff con alargue se muestren correctamente cuando el workflow los captura.
+
+El status se re-evalúa cada 60 segundos sin necesidad de recargar la página.
+
+Ver `src/utils/statusSimulator.js`.
