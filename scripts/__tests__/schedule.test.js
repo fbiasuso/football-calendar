@@ -105,7 +105,7 @@ describe('getSchedule — World Cup mode', () => {
     expect(diffMs).toBe(15 * 60 * 1000);
   });
 
-  it('shouldFetch=false with no fixtures and recently fetched', () => {
+  it('shouldFetch=false with no fixtures and recently fetched (1h < default 2h interval)', () => {
     const now = artDate(2026, 6, 1, 14, 0);
     const lastFetched = new Date(now.getTime() - 60 * 60 * 1000); // 1h ago
     const result = getSchedule({
@@ -115,7 +115,7 @@ describe('getSchedule — World Cup mode', () => {
       lastFetched,
     });
     expect(result.shouldFetch).toBe(false);
-    expect(result.reasons.some(r => r.includes('sin fixtures'))).toBe(true);
+    expect(result.reasons.some(r => r.includes('2h interval'))).toBe(true);
   });
 
   it('shouldFetch=true with next match < 2h → 30min interval', () => {

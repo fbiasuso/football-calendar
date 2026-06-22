@@ -189,6 +189,21 @@ export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }
     }
 
     // Default: every 2h (also covers the "no local fixtures" case)
+    const lastFetchTime = lastFetched ? new Date(lastFetched) : null;
+    const hoursSinceLastFetch = lastFetchTime
+      ? (now.getTime() - lastFetchTime.getTime()) / (60 * 60 * 1000)
+      : 99;
+
+    if (hoursSinceLastFetch < 2) {
+      reasons.push(`worldcup: default 2h interval, last fetch ${hoursSinceLastFetch.toFixed(1)}h ago → skip`);
+      return {
+        shouldFetch: false,
+        reasons,
+        nextPlanned: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+        endpoints: [],
+      };
+    }
+
     reasons.push('worldcup: default → 2h interval');
     endpoints.push('fixtures');
     return {
