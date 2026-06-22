@@ -600,6 +600,21 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
 
+          {/* Prompt at top */}
+          <div className="mb-4 text-center">
+            {m.winner ? (
+              <span className="text-xs font-medium text-green-600">
+                Ya seleccionaste un ganador para este cruce
+              </span>
+            ) : (
+              <span className="text-xs font-medium text-gray-500">
+                {!canPick
+                  ? 'Partido determinado por resultados de rondas anteriores.'
+                  : 'Elegí el ganador de este cruce'}
+              </span>
+            )}
+          </div>
+
           {/* Team cards - click to pick winner */}
           <div className="flex items-center justify-between gap-3">
             {/* Home team card */}
@@ -651,21 +666,6 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                 <span className="text-blue-600 text-lg leading-none">✓</span>
               )}
             </div>
-          </div>
-
-          {/* Footer info — no longer depends on roundState (per-pair unlock) */}
-          <div className="mt-4 text-center">
-            {m.winner ? (
-              <span className="text-[11px] text-green-600 font-medium">
-                Ya seleccionaste un ganador para este cruce
-              </span>
-            ) : (
-              <span className="text-[11px] text-gray-400">
-                {!canPick
-                  ? 'Partido determinado por resultados de rondas anteriores.'
-                  : 'Elegí el ganador de este cruce'}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -822,7 +822,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     isThirdSide={false}
                     candidateGroups={null}
                     isExpanded={hasHome}
-                    rank={1}
+                    rank={cfg?.homeRank || 1}
                   />
                 </div>
 
@@ -842,7 +842,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     isThirdSide={isThird}
                     candidateGroups={isThird ? awayCandidates : null}
                     isExpanded={hasAway}
-                    rank={isThird ? 3 : 2}
+                    rank={isThird ? 3 : (cfg?.awayRank || 2)}
                   />
                 </div>
               </div>
@@ -866,7 +866,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     <span className="text-sm font-semibold text-gray-900 truncate w-full text-center" title={homeSlotTeam?.name}>
                       {homeSlotTeam?.name}
                     </span>
-                    {cfg && <span className="text-[10px] text-gray-400 leading-tight">{rankToSource(1, cfg.homeGroup)}</span>}
+                    {cfg && <span className="text-[10px] text-gray-400 leading-tight">{rankToSource(cfg.homeRank, cfg.homeGroup)}</span>}
                   </div>
                   <button
                     onClick={() => handleChangeTeam(m.id, 'home')}
@@ -894,7 +894,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     </span>
                     {isThird
                       ? <span className="text-[10px] text-gray-400 leading-tight">3° del grupo {THIRD_PLACE_CANDIDATES[m.id] || ''}</span>
-                      : cfg && <span className="text-[10px] text-gray-400 leading-tight">{rankToSource(2, cfg.awayGroup)}</span>
+                      : cfg && <span className="text-[10px] text-gray-400 leading-tight">{rankToSource(cfg.awayRank, cfg.awayGroup)}</span>
                     }
                   </div>
                   <button
