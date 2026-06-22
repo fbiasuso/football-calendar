@@ -7,7 +7,7 @@
 import { getSchedule, isWorldCupPeriod } from './schedule.js';
 import { getMatches, getLiveMatches, getStandings, getRounds, formatDate } from './lib/api.js';
 import { loadJSON, saveMatches, saveStandings, saveSchedule, saveMeta, hasChanges } from './lib/storage.js';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -80,6 +80,12 @@ async function main() {
   // Ensure data/ exists before anything else — the peaceiris deploy step needs it
   if (!existsSync(DATA_DIR)) {
     mkdirSync(DATA_DIR, { recursive: true });
+  }
+
+  // Ensure default status.json exists (app fetches this to check fetchPaused)
+  const statusPath = join(DATA_DIR, 'status.json');
+  if (!existsSync(statusPath)) {
+    writeFileSync(statusPath, JSON.stringify({ dataFetchPaused: false }), 'utf-8');
   }
 
   // Load previous meta (local or gh-pages fallback)
