@@ -370,6 +370,20 @@
     "teams": [
       {
         "rank": 1,
+        "name": "Egypt",
+        "logo": "https://media.api-sports.io/football/teams/32.png",
+        "teamId": 32,
+        "points": 4,
+        "played": 2,
+        "wins": 1,
+        "draws": 1,
+        "losses": 0,
+        "goalsFor": 4,
+        "goalsAgainst": 2,
+        "goalDiff": 2
+      },
+      {
+        "rank": 2,
         "name": "Iran",
         "logo": "https://media.api-sports.io/football/teams/22.png",
         "teamId": 22,
@@ -383,7 +397,7 @@
         "goalDiff": 0
       },
       {
-        "rank": 2,
+        "rank": 3,
         "name": "Belgium",
         "logo": "https://media.api-sports.io/football/teams/1.png",
         "teamId": 1,
@@ -397,32 +411,18 @@
         "goalDiff": 0
       },
       {
-        "rank": 3,
+        "rank": 4,
         "name": "New Zealand",
         "logo": "https://media.api-sports.io/football/teams/4673.png",
         "teamId": 4673,
         "points": 1,
-        "played": 1,
+        "played": 2,
         "wins": 0,
         "draws": 1,
-        "losses": 0,
-        "goalsFor": 2,
-        "goalsAgainst": 2,
-        "goalDiff": 0
-      },
-      {
-        "rank": 4,
-        "name": "Egypt",
-        "logo": "https://media.api-sports.io/football/teams/32.png",
-        "teamId": 32,
-        "points": 1,
-        "played": 1,
-        "wins": 0,
-        "draws": 1,
-        "losses": 0,
-        "goalsFor": 1,
-        "goalsAgainst": 1,
-        "goalDiff": 0
+        "losses": 1,
+        "goalsFor": 3,
+        "goalsAgainst": 5,
+        "goalDiff": -2
       }
     ]
   },
