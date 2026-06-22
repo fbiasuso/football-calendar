@@ -62,6 +62,34 @@ function getNextMatchTime(knownFixtures, now) {
  * @param {Object} [options.meta] - Previous meta.json content
  * @returns {{ shouldFetch: boolean, reasons: string[], nextPlanned: Date, endpoints: string[] }}
  */
+/**
+ * Get the next window opening time in ART for a given mode.
+ * Outside-window skips set nextPlanned to this time so the scheduler
+ * advances reliably toward the next active period.
+ * @param {'worldcup'|'leagues'} mode
+ * @param {Date} now
+ * @returns {Date}
+ */
+function getNextWindowOpening(mode, now) {
+  const artHour = getArtHour(now);
+  let openingHour;
+  if (mode === 'worldcup') {
+    // World Cup: 12:00 ART
+    openingHour = 12;
+  } else {
+    // Leagues: 08:00 ART
+    openingHour = 8;
+  }
+
+  // If we're already past openingHour today, next opening is tomorrow
+  const candidate = new Date(now);
+  candidate.setUTCHours(openingHour + 3, 0, 0, 0); // ART→UTC = +3h
+  if (now >= candidate) {
+    candidate.setUTCDate(candidate.getUTCDate() + 1);
+  }
+  return candidate;
+}
+
 export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }) {
   const reasons = [];
   const endpoints = [];
@@ -124,11 +152,12 @@ export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }
 
     if (!inWindow) {
       // Outside active window (2:00-11:59) — skip (off-hours handled above)
-      reasons.push(`fuera de ventana activa (${artHour}:00 ART)`);
+      const nextWindow = getNextWindowOpening('worldcup', now);
+      reasons.push(`fuera de ventana activa (${artHour}:00 ART), próxima ventana: ${nextWindow.toISOString()}`);
       return {
         shouldFetch: false,
         reasons,
-        nextPlanned: new Date(now.getTime() + 60 * 60 * 1000), // Check again in 1h
+        nextPlanned: nextWindow,
         endpoints: [],
       };
     }
@@ -176,11 +205,12 @@ export function getSchedule({ now, knownFixtures = [], mode, lastFetched, meta }
 
   if (!inWindow) {
     // Outside active window (2:00-7:59) — skip (off-hours handled above)
-    reasons.push(`fuera de ventana activa (${artHour}:00 ART)`);
+    const nextWindow = getNextWindowOpening('leagues', now);
+    reasons.push(`fuera de ventana activa (${artHour}:00 ART), próxima ventana: ${nextWindow.toISOString()}`);
     return {
       shouldFetch: false,
       reasons,
-      nextPlanned: new Date(now.getTime() + 60 * 60 * 1000),
+      nextPlanned: nextWindow,
       endpoints: [],
     };
   }

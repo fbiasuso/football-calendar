@@ -101,6 +101,24 @@ async function main() {
 
   if (!schedule.shouldFetch) {
     console.log(`[fetch-data] SKIP: ${schedule.reasons.join(', ')}`);
+    // Always persist nextPlanned so gh-pages meta advances on each run.
+    // Without this, the skip path never updates meta.json and the scheduler
+    // keeps reading a stale nextPlanned from the last actual fetch.
+    if (schedule.nextPlanned) {
+      const skipMeta = {
+        lastFetched: meta?.lastFetched || TODAY.toISOString(),
+        lastStandingsFetch: meta?.lastStandingsFetch,
+        dataChanged: false,
+        source: 'api-football',
+        mode,
+        nextPlanned: schedule.nextPlanned.toISOString(),
+        endpointsUsed: [],
+        fixturesToday: knownFixtures.length,
+        liveNow: knownFixtures.filter(m => m.status === 'live').length,
+      };
+      saveMeta(skipMeta);
+      console.log(`[fetch-data] Meta saved (nextPlanned: ${skipMeta.nextPlanned})`);
+    }
     process.exit(0);
   }
 
