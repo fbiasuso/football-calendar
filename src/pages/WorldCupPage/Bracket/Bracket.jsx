@@ -545,6 +545,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         style={{
           gridRow: m.gridRow,
           gridColumn: m.gridCol,
+          height: '52px',
         }}
         onClick={() => {
           if (cellClickable) setSelectedMatchup(m);
@@ -1042,7 +1043,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
       {/* Bracket grid — 9 columns: R32 | C | R16 | C | QF | C | SF | C | F */}
       <div className="overflow-x-auto">
         <div
-          className="grid min-w-[700px]"
+          className="grid"
           style={{
             gridTemplateColumns: 'minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr)',
             gridTemplateRows: '32px 28px repeat(39, 28px)',
