@@ -631,7 +631,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedMatchup(null)}>
-        <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="flex justify-between items-center mb-3">
             <div>
@@ -642,7 +642,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           </div>
 
           {/* Prompt at top */}
-          <div className="mb-4 text-center">
+          <div className="mb-6 text-center">
             {m.winner ? (
               <span className="text-xs font-medium text-green-600">
                 Ya seleccionaste un ganador para este cruce
@@ -736,7 +736,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedMatchup(null)}>
-        <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="flex justify-between items-center mb-3">
             <div>
