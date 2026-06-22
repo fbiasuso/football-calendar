@@ -9,6 +9,7 @@ import DateNav from './components/DateNav/DateNav.jsx';
 import SortControl from './components/SortControl/SortControl.jsx';
 import WorldCupPage from './pages/WorldCupPage/WorldCupPage.jsx';
 import { formatRelativeTime } from './utils/dateUtils.js';
+import { simulateMatchStatus } from './utils/statusSimulator.js';
 
 function App() {
   const { matches, isLoading, error, refresh, hasLiveMatches } = useMatches();
@@ -70,6 +71,12 @@ function App() {
     const fiveMinAgo = Date.now() - 5 * 60 * 1000;
     return matches.some(m => m.status === 'live' && m.date > fiveMinAgo);
   }, [matches, clockTick]);
+
+  // In static mode, simulate match status from scheduled times
+  const displayedMatches = useMemo(() => {
+    if (isStaticMode !== true) return matches;
+    return matches.map(m => simulateMatchStatus(m));
+  }, [matches, isStaticMode, clockTick]);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -209,7 +216,7 @@ function App() {
               
               {/* Match list */}
               {!isLoading && (
-                <MatchList matches={matches} />
+                <MatchList matches={displayedMatches} />
               )}
             </div>
           </div>
