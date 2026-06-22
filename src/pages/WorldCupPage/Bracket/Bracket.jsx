@@ -49,7 +49,7 @@ export function computeRoundStates(wcPicks, graph, wcSlots) {
 const ROUND_OFFSETS = [0, 1, 3, 7, 15];
 
 function rowStart(round, idx) {
-  if (round === 4) return 21; // Final: centered between SF-M1 (rows 10-25) and SF-M2 (rows 26-41)
+  if (round === 4) return 18; // Final: follows formula pattern (0*2⁵ + 3 + 15 = 18), aligns with SF→Final connector
   return idx * Math.pow(2, round + 1) + 3 + ROUND_OFFSETS[round];
 }
 function rowSpan(round) {
@@ -631,7 +631,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedMatchup(null)}>
-        <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white rounded-xl shadow-xl p-5 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="flex justify-between items-center mb-3">
             <div>
@@ -641,6 +641,8 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
 
+          {/* Content wrapper — fixed min-height matches R32 modal */}
+          <div className="min-h-[240px] flex flex-col items-center justify-center">
           {/* Prompt at top */}
           <div className="mb-6 text-center">
             {m.winner ? (
@@ -708,6 +710,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
               )}
             </div>
           </div>
+          </div>{/* end min-h[240px] wrapper */}
         </div>
       </div>
     );
@@ -736,7 +739,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
 
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelectedMatchup(null)}>
-        <div className="bg-white rounded-xl shadow-xl p-6 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-white rounded-xl shadow-xl p-5 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="flex justify-between items-center mb-3">
             <div>
@@ -746,6 +749,8 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
             <button onClick={() => setSelectedMatchup(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1" aria-label="Cerrar">✕</button>
           </div>
 
+          {/* Content wrapper — fixed min-height matches R32 modal */}
+          <div className="min-h-[240px] flex flex-col items-center justify-center">
           {/* Teams - read only */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col items-center gap-2 text-center flex-1 min-w-0 p-3 rounded-lg border-2 border-gray-100 bg-gray-50">
@@ -783,6 +788,7 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
                     : 'Partido determinado por resultados de rondas anteriores.'}
             </span>
           </div>
+          </div>{/* end min-h[240px] wrapper */}
         </div>
       </div>
     );
@@ -1045,8 +1051,9 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
         <div
           className="grid"
           style={{
-            gridTemplateColumns: 'minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr) 16px minmax(120px, 1fr)',
-            gridTemplateRows: '32px 28px repeat(39, 28px)',
+            gridTemplateColumns: 'minmax(100px, 1fr) 16px minmax(100px, 1fr) 16px minmax(100px, 1fr) 16px minmax(100px, 1fr) 16px minmax(100px, 1fr)',
+            gridTemplateRows: '32px 28px repeat(33, 28px)',
+            gridAutoRows: '0px',
           }}
         >
           {/* Round headers */}
