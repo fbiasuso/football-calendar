@@ -36,3 +36,4 @@ jobs:
           publish_dir: ./data
           destination_dir: ./data
           keep_files: true
+          allow_empty_commit: true
