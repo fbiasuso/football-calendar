@@ -48,6 +48,21 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Re-fetch meta.json every 5 min in static mode to keep lastFetched current
+  useEffect(() => {
+    if (isStaticMode !== true) return;
+    const metaUrl = `${import.meta.env.BASE_URL}data/meta.json`;
+    const id = setInterval(() => {
+      fetch(metaUrl)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (d?.lastFetched) setStaticLastFetched(d.lastFetched);
+        })
+        .catch(() => {});
+    }, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [isStaticMode]);
+
   const effectiveLastUpdated = isStaticMode ? staticLastFetched : lastUpdated;
   const relativeTime = useMemo(() => formatRelativeTime(effectiveLastUpdated), [effectiveLastUpdated, clockTick]);
 
