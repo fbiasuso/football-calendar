@@ -90,8 +90,19 @@ async function main() {
   const knownFixtures = getKnownFixtures();
   console.log(`[fetch-data] Known fixtures: ${knownFixtures.length}`);
 
-  // Ask the scheduler
-  const schedule = getSchedule({
+  // Ask the scheduler (bypass when FORCE=true — manual workflow_dispatch)
+  const isForced = process.env.FORCE === 'true';
+
+  if (isForced) {
+    console.log(`[fetch-data] FORCED manual fetch — bypassing scheduler`);
+  }
+
+  const schedule = isForced ? {
+    shouldFetch: true,
+    reasons: ['forced manual fetch'],
+    nextPlanned: new Date(TODAY.getTime() + 2 * 60 * 60 * 1000),
+    endpoints: ['fixtures', 'live', 'standings'],
+  } : getSchedule({
     now: TODAY,
     knownFixtures,
     mode,
