@@ -83,8 +83,8 @@
     },
     "status": "pending",
     "score": {
-      "home": null,
-      "away": null
+      "home": 1,
+      "away": 0
     },
     "minute": null,
     "round": "Group Stage - 2",
