@@ -11,6 +11,10 @@ import { getDateKey, addDays } from '../utils/dateUtils.js';
 const STATIC_BASE = `${import.meta.env.BASE_URL}data`;
 let staticMode = null; // null=unsure, true=static, false=live (cached after first check)
 
+// Supabase mode detection — if VITE_SUPABASE_URL is set, delegate to supabaseAdapter
+// bypassing static/API fallback entirely. Priority: supabase → static → live API.
+const useSupabase = !!import.meta.env.VITE_SUPABASE_URL;
+
 /**
  * Try to fetch a static JSON file from /data/
  * @param {string} path - Path relative to /data/ (e.g. 'matches-2026-06-20.json')
@@ -84,6 +88,11 @@ async function ensureModeDetected() {
  * @returns {Promise<Match[]>}
  */
 export async function getMatches(date) {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.getMatches(date);
+  }
+
   const isStatic = await ensureModeDetected();
 
   if (isStatic) {
@@ -122,6 +131,11 @@ export async function getMatches(date) {
  * @returns {Promise<Match[]>}
  */
 export async function getLiveMatches() {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.getLiveMatches();
+  }
+
   const isStatic = await ensureModeDetected();
 
   if (isStatic) {
@@ -169,6 +183,11 @@ export async function findFirstLegMatch(match) {
  * @returns {Promise<Array<{group: string, teams: Array}>>}
  */
 export async function getStandings(leagueId, season) {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.getStandings(leagueId, season);
+  }
+
   const isStatic = await ensureModeDetected();
 
   if (isStatic) {
@@ -178,6 +197,19 @@ export async function getStandings(leagueId, season) {
 
   const { apiFootballClient } = await import('./apiFootball.js');
   return apiFootballClient.getStandings(leagueId, season);
+}
+
+/**
+ * Get bracket nodes (World Cup knockout bracket layout).
+ * Only available via Supabase — returns empty array when Supabase is not configured.
+ * @returns {Promise<Object[]>}
+ */
+export async function getBracketNodes() {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.getBracketNodes();
+  }
+  return [];
 }
 
 /**
