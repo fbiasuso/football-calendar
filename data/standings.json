@@ -614,6 +614,20 @@
     "teams": [
       {
         "rank": 1,
+        "name": "Portugal",
+        "logo": "https://media.api-sports.io/football/teams/27.png",
+        "teamId": 27,
+        "points": 4,
+        "played": 2,
+        "wins": 1,
+        "draws": 1,
+        "losses": 0,
+        "goalsFor": 6,
+        "goalsAgainst": 1,
+        "goalDiff": 5
+      },
+      {
+        "rank": 2,
         "name": "Colombia",
         "logo": "https://media.api-sports.io/football/teams/8.png",
         "teamId": 8,
@@ -627,24 +641,10 @@
         "goalDiff": 2
       },
       {
-        "rank": 2,
+        "rank": 3,
         "name": "Congo DR",
         "logo": "https://media.api-sports.io/football/teams/1508.png",
         "teamId": 1508,
-        "points": 1,
-        "played": 1,
-        "wins": 0,
-        "draws": 1,
-        "losses": 0,
-        "goalsFor": 1,
-        "goalsAgainst": 1,
-        "goalDiff": 0
-      },
-      {
-        "rank": 3,
-        "name": "Portugal",
-        "logo": "https://media.api-sports.io/football/teams/27.png",
-        "teamId": 27,
         "points": 1,
         "played": 1,
         "wins": 0,
@@ -660,13 +660,13 @@
         "logo": "https://media.api-sports.io/football/teams/1568.png",
         "teamId": 1568,
         "points": 0,
-        "played": 1,
+        "played": 2,
         "wins": 0,
         "draws": 0,
-        "losses": 1,
+        "losses": 2,
         "goalsFor": 1,
-        "goalsAgainst": 3,
-        "goalDiff": -2
+        "goalsAgainst": 8,
+        "goalDiff": -7
       }
     ]
   },

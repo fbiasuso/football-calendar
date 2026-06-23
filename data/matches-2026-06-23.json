@@ -81,12 +81,12 @@
         "id": 1568
       }
     },
-    "status": "pending",
+    "status": "finished",
     "score": {
-      "home": null,
-      "away": null
+      "home": 5,
+      "away": 0
     },
-    "minute": null,
+    "minute": 90,
     "round": "Group Stage - 2",
     "matchday": null,
     "isKnockout": false,
@@ -112,12 +112,12 @@
         "id": 1504
       }
     },
-    "status": "pending",
+    "status": "live",
     "score": {
-      "home": null,
-      "away": null
+      "home": 0,
+      "away": 0
     },
-    "minute": null,
+    "minute": 35,
     "round": "Group Stage - 2",
     "matchday": null,
     "isKnockout": false,
