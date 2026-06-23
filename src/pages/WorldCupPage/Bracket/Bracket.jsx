@@ -559,8 +559,10 @@ export default function Bracket({ standings: externalStandings, loading, rankerR
           }
         }}
       >
-        {/* Horizontal line going RIGHT */}
-        <div className="absolute left-full top-1/2 w-2 h-px bg-gray-500 -translate-y-1/2 pointer-events-none" />
+        {/* Horizontal line going RIGHT (skip Final — last column, no room) */}
+        {m.roundIndex !== 4 && (
+          <div className="absolute left-full top-1/2 w-2 h-px bg-gray-500 -translate-y-1/2 pointer-events-none" />
+        )}
 
         {/* Home team */}
         <div className="flex items-center gap-1.5">
