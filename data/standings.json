@@ -492,31 +492,31 @@
     "teams": [
       {
         "rank": 1,
-        "name": "Norway",
-        "logo": "https://media.api-sports.io/football/teams/1090.png",
-        "teamId": 1090,
-        "points": 3,
-        "played": 1,
-        "wins": 1,
-        "draws": 0,
-        "losses": 0,
-        "goalsFor": 4,
-        "goalsAgainst": 1,
-        "goalDiff": 3
-      },
-      {
-        "rank": 2,
         "name": "France",
         "logo": "https://media.api-sports.io/football/teams/2.png",
         "teamId": 2,
-        "points": 3,
-        "played": 1,
-        "wins": 1,
+        "points": 6,
+        "played": 2,
+        "wins": 2,
         "draws": 0,
         "losses": 0,
-        "goalsFor": 3,
+        "goalsFor": 6,
         "goalsAgainst": 1,
-        "goalDiff": 2
+        "goalDiff": 5
+      },
+      {
+        "rank": 2,
+        "name": "Norway",
+        "logo": "https://media.api-sports.io/football/teams/1090.png",
+        "teamId": 1090,
+        "points": 6,
+        "played": 2,
+        "wins": 2,
+        "draws": 0,
+        "losses": 0,
+        "goalsFor": 7,
+        "goalsAgainst": 3,
+        "goalDiff": 4
       },
       {
         "rank": 3,
@@ -524,13 +524,13 @@
         "logo": "https://media.api-sports.io/football/teams/13.png",
         "teamId": 13,
         "points": 0,
-        "played": 1,
+        "played": 2,
         "wins": 0,
         "draws": 0,
-        "losses": 1,
-        "goalsFor": 1,
-        "goalsAgainst": 3,
-        "goalDiff": -2
+        "losses": 2,
+        "goalsFor": 3,
+        "goalsAgainst": 6,
+        "goalDiff": -3
       },
       {
         "rank": 4,
@@ -538,13 +538,13 @@
         "logo": "https://media.api-sports.io/football/teams/1567.png",
         "teamId": 1567,
         "points": 0,
-        "played": 1,
+        "played": 2,
         "wins": 0,
         "draws": 0,
-        "losses": 1,
+        "losses": 2,
         "goalsFor": 1,
-        "goalsAgainst": 4,
-        "goalDiff": -3
+        "goalsAgainst": 7,
+        "goalDiff": -6
       }
     ]
   },

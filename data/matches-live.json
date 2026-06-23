@@ -1,1 +1,33 @@
-[]
+[
+  {
+    "id": "1489400",
+    "title": "Jordan vs Algeria",
+    "date": 1782183600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Jordan",
+        "badge": "https://media.api-sports.io/football/teams/1548.png",
+        "id": 1548
+      },
+      "away": {
+        "name": "Algeria",
+        "badge": "https://media.api-sports.io/football/teams/1532.png",
+        "id": 1532
+      }
+    },
+    "status": "live",
+    "score": {
+      "home": 1,
+      "away": 0
+    },
+    "minute": 45,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  }
+]

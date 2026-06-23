@@ -1,0 +1,157 @@
+[
+  {
+    "id": "1539008",
+    "title": "Colombia vs Congo DR",
+    "date": 1782266400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Colombia",
+        "badge": "https://media.api-sports.io/football/teams/8.png",
+        "id": 8
+      },
+      "away": {
+        "name": "Congo DR",
+        "badge": "https://media.api-sports.io/football/teams/1508.png",
+        "id": 1508
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 2",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489408",
+    "title": "Switzerland vs Canada",
+    "date": 1782327600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Switzerland",
+        "badge": "https://media.api-sports.io/football/teams/15.png",
+        "id": 15
+      },
+      "away": {
+        "name": "Canada",
+        "badge": "https://media.api-sports.io/football/teams/5529.png",
+        "id": 5529
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 3",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1539009",
+    "title": "Bosnia & Herzegovina vs Qatar",
+    "date": 1782327600000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Bosnia & Herzegovina",
+        "badge": "https://media.api-sports.io/football/teams/1113.png",
+        "id": 1113
+      },
+      "away": {
+        "name": "Qatar",
+        "badge": "https://media.api-sports.io/football/teams/1569.png",
+        "id": 1569
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 3",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489405",
+    "title": "Morocco vs Haiti",
+    "date": 1782338400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Morocco",
+        "badge": "https://media.api-sports.io/football/teams/31.png",
+        "id": 31
+      },
+      "away": {
+        "name": "Haiti",
+        "badge": "https://media.api-sports.io/football/teams/2386.png",
+        "id": 2386
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 3",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  },
+  {
+    "id": "1489406",
+    "title": "Scotland vs Brazil",
+    "date": 1782338400000,
+    "league": "World Cup 2026",
+    "leagueId": 1,
+    "competitionCode": null,
+    "stage": null,
+    "teams": {
+      "home": {
+        "name": "Scotland",
+        "badge": "https://media.api-sports.io/football/teams/1108.png",
+        "id": 1108
+      },
+      "away": {
+        "name": "Brazil",
+        "badge": "https://media.api-sports.io/football/teams/6.png",
+        "id": 6
+      }
+    },
+    "status": "pending",
+    "score": {
+      "home": null,
+      "away": null
+    },
+    "minute": null,
+    "round": "Group Stage - 3",
+    "matchday": null,
+    "isKnockout": false,
+    "season": 2026
+  }
+]
