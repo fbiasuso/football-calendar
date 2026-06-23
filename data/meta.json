@@ -1,13 +1,11 @@
 {
   "lastFetched": "2026-06-23T20:35:08.242Z",
   "lastStandingsFetch": "2026-06-23T20:35:08.242Z",
-  "dataChanged": true,
+  "dataChanged": false,
   "source": "api-football",
   "mode": "worldcup",
   "nextPlanned": "2026-06-23T22:35:08.242Z",
-  "endpointsUsed": [
-    "fixtures"
-  ],
+  "endpointsUsed": [],
   "fixturesToday": 0,
   "liveNow": 0
 }
