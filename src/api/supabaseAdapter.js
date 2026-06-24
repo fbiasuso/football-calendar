@@ -272,8 +272,7 @@ export function subscribeMatches(date, onMatchChange) {
 export async function triggerForceFetch() {
   const { data, error } = await supabase.functions.invoke('fetch-data', {
     method: 'POST',
-    body: {},
-    query: { force: 'true' },
+    body: { force: true },
   });
   if (error) throw new Error(`Force fetch failed: ${error.message}`);
   return data;

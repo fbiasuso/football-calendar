@@ -44,9 +44,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // ── Parse force param ──────────────────────────────────────────────────
+    // ── Parse force param (from URL query OR request body) ──────────────────
     const url = new URL(req.url);
-    const force = url.searchParams.get("force") === "true";
+    let force = url.searchParams.get("force") === "true";
+
+    if (!force) {
+      try {
+        const body = await req.clone().json();
+        force = body?.force === true;
+      } catch {
+        // Body not JSON or empty — ignore
+      }
+    }
 
     if (force) {
       console.log("[fetch-data] FORCE mode — bypassing schedule");
