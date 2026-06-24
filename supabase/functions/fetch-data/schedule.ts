@@ -14,6 +14,7 @@ export interface ScheduleOptions {
   mode?: "worldcup" | "leagues";
   lastFetched?: Date | null;
   meta?: { nextPlanned?: string } | null;
+  fastMode?: boolean;
 }
 
 export interface ScheduleDecision {
@@ -112,6 +113,33 @@ export function getSchedule(options: ScheduleOptions): ScheduleDecision {
         endpoints: [],
       };
     }
+  }
+
+  // Fast mode: fetch live matches every 5 min
+  if (options.fastMode) {
+    const lastFetchTime = options.lastFetched ? new Date(options.lastFetched) : null;
+    const minutesSinceLastFetch = lastFetchTime
+      ? (now.getTime() - lastFetchTime.getTime()) / 60000
+      : 99;
+
+    if (minutesSinceLastFetch >= 5) {
+      reasons.push("fast_mode: every 5 min live check");
+      endpoints.push("live");
+      return {
+        shouldFetch: true,
+        reasons,
+        nextPlanned: new Date(now.getTime() + 5 * 60 * 1000),
+        endpoints,
+      };
+    }
+
+    reasons.push(`fast_mode: last fetch ${Math.round(minutesSinceLastFetch)} min ago → skip`);
+    return {
+      shouldFetch: false,
+      reasons,
+      nextPlanned: new Date(now.getTime() + 5 * 60 * 1000),
+      endpoints: [],
+    };
   }
 
   // --- Off-hours schedule refresh (both modes) ---

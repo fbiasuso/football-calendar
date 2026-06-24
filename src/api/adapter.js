@@ -213,6 +213,41 @@ export async function getBracketNodes() {
 }
 
 /**
+ * Trigger a force fetch via the Edge Function (Supabase mode only).
+ * @returns {Promise<Object|null>}
+ */
+export async function triggerForceFetch() {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.triggerForceFetch();
+  }
+  return null;
+}
+
+/**
+ * Get API budget info from pipeline_meta (Supabase mode only).
+ * @returns {Promise<{api_budget: number, api_requests_today: number, fast_mode: boolean}>}
+ */
+export async function getBudget() {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.getBudget();
+  }
+  return { api_budget: 0, api_requests_today: 0, fast_mode: false };
+}
+
+/**
+ * Toggle fast mode on the Edge Function pipeline (Supabase mode only).
+ * @param {boolean} enabled
+ */
+export async function toggleFastMode(enabled) {
+  if (useSupabase) {
+    const { supabaseAdapter } = await import('./supabaseAdapter.js');
+    return supabaseAdapter.setFastMode(enabled);
+  }
+}
+
+/**
  * Get fixture rounds for a league and season
  * @param {number} leagueId - API-Football league ID
  * @param {number} season - Season year

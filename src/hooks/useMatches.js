@@ -1,7 +1,10 @@
 // useMatches hook - Fetch, cache, and polling for matches
 import { useEffect, useCallback, useRef } from 'react';
 import useAppStore from '../store/useAppStore.js';
+import { supabase } from '../lib/supabase.js';
 import { getDateKey } from '../utils/dateUtils.js';
+
+const useSupabase = !!import.meta.env.VITE_SUPABASE_URL;
 
 const CACHE_PREFIX = 'fc_matches_';
 const CACHE_EXPIRY = 60 * 60 * 1000; // 60 minutes (API-Football has 100 req/day limit)
@@ -79,11 +82,12 @@ export function useMatches() {
   } = useAppStore();
   
   const pollingIntervalRef = useRef(null);
+  const unsubscribeRef = useRef(null);
   
   // Fetch matches (with cache)
   const loadMatches = useCallback(async (forceRefresh = false) => {
-    // Check cache first (unless force refresh)
-    if (!forceRefresh) {
+    // Skip cache if Supabase is active (Realtime provides live updates)
+    if (!useSupabase && !forceRefresh) {
       const cached = getCachedMatches(selectedDate);
       if (cached) {
         setMatches(cached.matches, cached.timestamp);
@@ -118,8 +122,9 @@ export function useMatches() {
     await loadMatches(true);
   }, [selectedDate, loadMatches]);
   
-  // Auto-polling logic
+  // Auto-polling (legacy, only without Supabase)
   useEffect(() => {
+    if (useSupabase) return; // Realtime replaces polling
     if (autoPollingEnabled && matches.some(m => m.status === 'live')) {
       // Determine polling interval
       const interval = hasMatchInLast5Minutes(matches) 
@@ -136,12 +141,52 @@ export function useMatches() {
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [autoPollingEnabled, matches, loadMatches]);
+  }, [autoPollingEnabled, matches, loadMatches, useSupabase]);
   
   // Initial load
   useEffect(() => {
     loadMatches();
   }, [loadMatches]);
+  
+  // Realtime subscription (Supabase mode only)
+  useEffect(() => {
+    if (!useSupabase) return;
+
+    // Cleanup previous subscription
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+
+    // Import dynamically to avoid circular dependency
+    import('../api/supabaseAdapter.js').then(({ subscribeMatches }) => {
+      unsubscribeRef.current = subscribeMatches(selectedDate, (updatedMatch) => {
+        const state = useAppStore.getState();
+        const currentMatches = state.matches;
+        const idx = currentMatches.findIndex(m => m.id === updatedMatch.id);
+
+        let newMatches;
+        if (idx >= 0) {
+          // Replace existing match
+          newMatches = [...currentMatches];
+          newMatches[idx] = { ...newMatches[idx], ...updatedMatch };
+        } else if (updatedMatch.status !== 'finished' && updatedMatch.date >= new Date(selectedDate).getTime()) {
+          // New match appeared in our date range (only if not finished)
+          newMatches = [...currentMatches, updatedMatch];
+        } else {
+          return; // No update needed
+        }
+
+        state.setMatches(newMatches, state.lastUpdated);
+      });
+    });
+
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, [selectedDate, useSupabase]);
   
   const hasLiveMatches = matches.some(m => m.status === 'live');
 

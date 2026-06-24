@@ -171,6 +171,10 @@ export async function updatePipelineMeta(
     mode?: string;
     error_count?: number;
     last_error?: string | null;
+    api_budget?: number;
+    api_requests_today?: number;
+    api_reset_date?: string;
+    fast_mode?: boolean;
   },
 ): Promise<void> {
   const client = await POOL.connect();
@@ -184,6 +188,10 @@ export async function updatePipelineMeta(
     if (data.mode !== undefined) { sets.push(`mode = $${i++}`); vals.push(data.mode); }
     if (data.error_count !== undefined) { sets.push(`error_count = $${i++}`); vals.push(data.error_count); }
     if (data.last_error !== undefined) { sets.push(`last_error = $${i++}`); vals.push(data.last_error); }
+    if (data.api_budget !== undefined) { sets.push(`api_budget = $${i++}`); vals.push(data.api_budget); }
+    if (data.api_requests_today !== undefined) { sets.push(`api_requests_today = $${i++}`); vals.push(data.api_requests_today); }
+    if (data.api_reset_date !== undefined) { sets.push(`api_reset_date = $${i++}`); vals.push(data.api_reset_date); }
+    if (data.fast_mode !== undefined) { sets.push(`fast_mode = $${i++}`); vals.push(data.fast_mode); }
 
     await client.query(
       `UPDATE pipeline_meta SET ${sets.join(", ")} WHERE id = 1`,
@@ -192,4 +200,15 @@ export async function updatePipelineMeta(
   } finally {
     client.release();
   }
+}
+
+export async function readBudget(client: any): Promise<{
+  api_budget: number;
+  api_requests_today: number;
+  api_reset_date: string | null;
+}> {
+  const { rows } = await client.query(
+    "SELECT api_budget, api_requests_today, api_reset_date FROM pipeline_meta WHERE id = 1"
+  );
+  return rows[0] || { api_budget: 100, api_requests_today: 0, api_reset_date: null };
 }

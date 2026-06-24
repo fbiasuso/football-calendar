@@ -4,6 +4,18 @@
 
 const API_BASE_URL = "https://v3.football.api-sports.io";
 
+// ── Request Counter ─────────────────────────────────────────────────────────
+
+let _requestCount = 0;
+
+export function getRequestCount(): number {
+  return _requestCount;
+}
+
+export function resetRequestCount(): void {
+  _requestCount = 0;
+}
+
 // Inline league IDs (matches src/utils/leagueConfig.js)
 const API_FOOTBALL_LEAGUE_IDS: Record<string, number> = {
   "World Cup 2026": 1,
@@ -97,6 +109,7 @@ export async function fetchWithRetry(
 
     if (!response.ok) {
       if (response.status === 429 && retries < 3) {
+        _requestCount++;
         await new Promise((resolve) =>
           setTimeout(resolve, 1000 * (retries + 1))
         );
@@ -113,6 +126,7 @@ export async function fetchWithRetry(
       throw new Error(`API-Football Error: ${errorMsg}`);
     }
 
+    _requestCount++;
     return data;
   } catch (error) {
     if (retries < 3) {

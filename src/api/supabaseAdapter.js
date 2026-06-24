@@ -216,9 +216,104 @@ export async function getBracketNodes() {
   return data || [];
 }
 
+// ── Realtime Subscription ────────────────────────────────────────────────────
+
+/**
+ * Subscribe to realtime changes on the matches table for a specific date range.
+ * @param {Date} date - Local date to subscribe to
+ * @param {(match: Object) => void} onMatchChange - Called with normalized match on each change
+ * @returns {() => void} Unsubscribe function
+ */
+export function subscribeMatches(date, onMatchChange) {
+  const targetDate = new Date(date);
+  const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
+
+  const channel = supabase
+    .channel('matches-realtime')
+    .on('postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'matches',
+        filter: `date=gte.${startOfDay.toISOString()}`,
+      },
+      (payload) => {
+        if (payload.new) {
+          // Build a fake row with the league/team names for normalizeMatch
+          const row = {
+            ...payload.new,
+            league: payload.new.league_id ? { id: payload.new.league_id, name: null, logo: null, api_id: null } : null,
+            home_team: payload.new.home_team_id ? { id: payload.new.home_team_id, name: null, logo: null, api_id: null } : null,
+            away_team: payload.new.away_team_id ? { id: payload.new.away_team_id, name: null, logo: null, api_id: null } : null,
+          };
+          // Only notify if within the local date range
+          const matchDate = new Date(payload.new.date);
+          if (matchDate >= startOfDay && matchDate < endOfDay) {
+            onMatchChange(normalizeMatch(row));
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    channel.unsubscribe();
+  };
+}
+
+// ── Edge Function / Pipeline Commands ───────────────────────────────────────
+
+/**
+ * Trigger an immediate fetch via the Edge Function with ?force=true.
+ * Realtime will propagate the resulting DB changes.
+ * @returns {Promise<Object>} Edge Function response
+ */
+export async function triggerForceFetch() {
+  const { data, error } = await supabase.functions.invoke('fetch-data', {
+    method: 'POST',
+    body: {},
+    query: { force: 'true' },
+  });
+  if (error) throw new Error(`Force fetch failed: ${error.message}`);
+  return data;
+}
+
+/**
+ * Read budget info from pipeline_meta.
+ * Uses direct PostgREST query (RLS allows public read for budget columns).
+ * @returns {Promise<{api_budget: number, api_requests_today: number, fast_mode: boolean}>}
+ */
+export async function getBudget() {
+  const { data, error } = await supabase
+    .from('pipeline_meta')
+    .select('api_budget, api_requests_today, fast_mode')
+    .eq('id', 1)
+    .single();
+  if (error) throw new Error(`Budget query error: ${error.message}`);
+  return data;
+}
+
+/**
+ * Toggle fast mode on the Edge Function pipeline.
+ * RLS allows anon key to UPDATE fast_mode on id=1.
+ * @param {boolean} enabled
+ */
+export async function setFastMode(enabled) {
+  const { error } = await supabase
+    .from('pipeline_meta')
+    .update({ fast_mode: enabled })
+    .eq('id', 1);
+  if (error) throw new Error(`Fast mode toggle error: ${error.message}`);
+}
+
 export const supabaseAdapter = {
   getMatches,
   getLiveMatches,
   getStandings,
   getBracketNodes,
+  subscribeMatches,
+  triggerForceFetch,
+  getBudget,
+  setFastMode,
 };

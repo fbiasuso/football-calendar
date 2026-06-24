@@ -10,9 +10,9 @@ import pg from "npm:pg@8.13.0";
 const { Pool } = pg;
 const POOL = new Pool({ connectionString: Deno.env.get("SUPABASE_DB_URL"), max: 1 });
 
-import { getSchedule, isWorldCupPeriod } from "./schedule.ts";
-import { getMatches, getLiveMatches, getStandings } from "./api.ts";
-import { upsertMatches, upsertStandings, updatePipelineMeta } from "./db.ts";
+import { getSchedule, isWorldCupPeriod, type ScheduleDecision } from "./schedule.ts";
+import { getMatches, getLiveMatches, getStandings, getRequestCount, resetRequestCount } from "./api.ts";
+import { upsertMatches, upsertStandings, updatePipelineMeta, readBudget } from "./db.ts";
 
 export interface FetchDataResponse {
   fetched: boolean;
@@ -44,6 +44,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // ── Parse force param ──────────────────────────────────────────────────
+    const url = new URL(req.url);
+    const force = url.searchParams.get("force") === "true";
+
+    if (force) {
+      console.log("[fetch-data] FORCE mode — bypassing schedule");
+    }
+
     // ── Check API key ─────────────────────────────────────────────────────
     const apiFootballKey = Deno.env.get("VITE_API_FOOTBALL_API_KEY");
 
@@ -65,6 +73,47 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const pipelineMeta = pipelineRows[0];
+
+    // ── Budget check ────────────────────────────────────────────────────────
+    const budget = await readBudget(POOL);
+
+    // UTC day reset logic
+    const today = new Date();
+    const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const resetDate = budget.api_reset_date ? new Date(budget.api_reset_date) : null;
+
+    if (!resetDate || todayUTC > resetDate) {
+      await updatePipelineMeta(null, {
+        api_requests_today: 0,
+        api_reset_date: todayUTC.toISOString(),
+      });
+      budget.api_requests_today = 0;
+    }
+
+    // Budget check — skip if exhausted
+    if (budget.api_requests_today >= budget.api_budget) {
+      console.log("[fetch-data] Budget exhausted, skipping fetch");
+      return new Response(
+        JSON.stringify({
+          fetched: false,
+          reason: "API budget exhausted for today",
+          matchesUpserted: 0,
+          standingsUpserted: false,
+        }),
+        { status: 200, headers },
+      );
+    }
+
+    // Reset request counter for this cycle
+    resetRequestCount();
+
+    // Auto-regulation: low budget disables fast_mode
+    const remainingBudget = budget.api_budget - budget.api_requests_today;
+    if (remainingBudget < 20 && pipelineMeta.fast_mode) {
+      await updatePipelineMeta(null, { fast_mode: false });
+      console.log(`[fetch-data] Budget low (${remainingBudget}), disabling fast_mode`);
+    }
+
     const now = new Date();
     console.log(
       `[fetch-data] Mode: ${pipelineMeta.mode}, Time: ${now.toISOString()}`,
@@ -103,18 +152,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
       status: (m.status === "scheduled" ? "pending" : m.status) as "pending" | "live" | "finished",
     }));
 
-    // ── Ask scheduler ──────────────────────────────────────────────────────
-    const schedule = getSchedule({
-      now,
-      knownFixtures,
-      mode: mode as "worldcup" | "leagues",
-      lastFetched: pipelineMeta.last_fetched
-        ? new Date(pipelineMeta.last_fetched)
-        : null,
-      meta: pipelineMeta.next_planned
-        ? { nextPlanned: pipelineMeta.next_planned }
-        : null,
-    });
+    // ── Resolve schedule ──────────────────────────────────────────────────
+    // Force mode bypasses the scheduler and fetches immediately
+    const schedule = force
+      ? {
+          shouldFetch: true,
+          reasons: ["force: manual refresh"],
+          nextPlanned: new Date(now.getTime() + 5 * 60 * 1000),
+          endpoints: ["fixtures", "live"],
+        } as ScheduleDecision
+      : getSchedule({
+          now,
+          knownFixtures,
+          mode: mode as "worldcup" | "leagues",
+          lastFetched: pipelineMeta.last_fetched
+            ? new Date(pipelineMeta.last_fetched)
+            : null,
+          meta: pipelineMeta.next_planned
+            ? { nextPlanned: pipelineMeta.next_planned }
+            : null,
+          fastMode: pipelineMeta.fast_mode === true,
+        });
 
     if (!schedule.shouldFetch) {
       console.log(`[fetch-data] SKIP: ${schedule.reasons.join(", ")}`);
@@ -211,6 +269,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         mode: mode as string,
         error_count: 0,
         last_error: null,
+        api_requests_today: budget.api_requests_today + getRequestCount(),
       });
     } catch (fetchError: any) {
       console.error("[fetch-data] Fetch/upsert error:", fetchError.message);
@@ -223,6 +282,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         mode: mode as string,
         error_count: (pipelineMeta.error_count || 0) + 1,
         last_error: fetchError.message,
+        api_requests_today: budget.api_requests_today + getRequestCount(),
       }).catch((err) => {
         console.warn(
           "[fetch-data] Failed to update error in pipeline_meta:",

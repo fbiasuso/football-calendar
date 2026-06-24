@@ -10,11 +10,18 @@ import SortControl from './components/SortControl/SortControl.jsx';
 import WorldCupPage from './pages/WorldCupPage/WorldCupPage.jsx';
 import { formatRelativeTime } from './utils/dateUtils.js';
 import { simulateMatchStatus } from './utils/statusSimulator.js';
+import { getBudget, toggleFastMode } from './api/adapter.js';
+
+const HAS_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL;
 
 function App() {
   const { matches, isLoading, error, refresh, hasLiveMatches } = useMatches();
   const { error: storeError, autoPollingEnabled, setAutoPolling, currentView, lastUpdated } = useAppStore();
+  const fastMode = useAppStore((s) => s.fastMode);
+  const setFastMode = useAppStore((s) => s.setFastMode);
   const [fetchPaused, setFetchPaused] = useState(false);
+  const [budget, setBudget] = useState(null);
+  const [forceFetchLoading, setForceFetchLoading] = useState(false);
   const [isStaticMode, setIsStaticMode] = useState(null); // null=loading, true, false
   const [staticLastFetched, setStaticLastFetched] = useState(null);
   const [clockTick, setClockTick] = useState(0);
@@ -63,6 +70,24 @@ function App() {
     }, 5 * 60 * 1000);
     return () => clearInterval(id);
   }, [isStaticMode]);
+
+  // Budget polling (Supabase mode only)
+  useEffect(() => {
+    if (!HAS_SUPABASE) return;
+
+    const loadBudget = async () => {
+      try {
+        const data = await getBudget();
+        setBudget(data);
+      } catch (err) {
+        // Silent — budget is non-critical
+      }
+    };
+
+    loadBudget();
+    const interval = setInterval(loadBudget, 60000); // Refresh every 60s
+    return () => clearInterval(interval);
+  }, []);
 
   const effectiveLastUpdated = isStaticMode ? staticLastFetched : lastUpdated;
   const relativeTime = useMemo(() => formatRelativeTime(effectiveLastUpdated), [effectiveLastUpdated, clockTick]);
@@ -146,7 +171,75 @@ function App() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                 </button>
-                
+
+                {/* ── Fast Mode Toggle (Supabase only) ── */}
+                {HAS_SUPABASE && (
+                  <button
+                    onClick={async () => {
+                      const newVal = !fastMode;
+                      try {
+                        await toggleFastMode(newVal);
+                        setFastMode(newVal);
+                      } catch (err) {
+                        console.error('Failed to toggle fast mode:', err);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      fastMode
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-700 text-gray-300'
+                    }`}
+                    title={fastMode ? 'Modo rápido activo — fetch cada 5 min' : 'Activar modo rápido'}
+                    aria-label="Toggle fast mode"
+                  >
+                    ⚡ {fastMode ? 'En Vivo' : 'Modo Rápido'}
+                  </button>
+                )}
+
+                {/* ── Force Fetch Button (Supabase only) ── */}
+                {HAS_SUPABASE && (
+                  <button
+                    onClick={async () => {
+                      if (forceFetchLoading) return;
+                      setForceFetchLoading(true);
+                      try {
+                        const store = useAppStore.getState();
+                        await store.forceRefresh();
+                      } catch (err) {
+                        console.error('Force fetch failed:', err);
+                      } finally {
+                        setTimeout(() => setForceFetchLoading(false), 30000);
+                      }
+                    }}
+                    disabled={forceFetchLoading}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      forceFetchLoading
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-500'
+                    }`}
+                    title={forceFetchLoading ? 'Esperá 30s antes de actualizar de nuevo' : 'Forzar actualización desde API'}
+                    aria-label="Force fetch"
+                  >
+                    {forceFetchLoading ? '⏳' : '🔄'} Actualizar
+                  </button>
+                )}
+
+                {/* ── Budget Indicator (Supabase only) ── */}
+                {HAS_SUPABASE && budget && (
+                  <span
+                    className={`text-xs font-mono px-2 py-1 rounded ${
+                      budget.api_requests_today >= 80
+                        ? 'bg-red-900/50 text-red-300'
+                        : budget.api_requests_today >= 50
+                          ? 'bg-yellow-900/50 text-yellow-300'
+                          : 'bg-gray-700 text-gray-400'
+                    }`}
+                    title={`API-Football requests: ${budget.api_budget - budget.api_requests_today} restantes hoy`}
+                  >
+                    📊 {budget.api_requests_today}/{budget.api_budget}
+                  </span>
+                )}
+
                 {fetchPaused && (
                   <span className="text-xs font-medium text-red-600 ml-1 select-none">
                     Actualizaciones desactivadas
