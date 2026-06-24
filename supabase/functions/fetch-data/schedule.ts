@@ -190,7 +190,7 @@ export function getSchedule(options: ScheduleOptions): ScheduleDecision {
     if (knownFixtures && knownFixtures.length > 0) {
       if (hasLive) {
         reasons.push("worldcup: live match → 15min interval");
-        endpoints.push("fixtures", "live", "standings");
+        endpoints.push("fixtures", "live");
         return {
           shouldFetch: true,
           reasons,

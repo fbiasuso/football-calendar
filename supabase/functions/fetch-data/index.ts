@@ -11,8 +11,9 @@ const { Pool } = pg;
 const POOL = new Pool({ connectionString: Deno.env.get("SUPABASE_DB_URL"), max: 1 });
 
 import { getSchedule, isWorldCupPeriod, type ScheduleDecision } from "./schedule.ts";
-import { getMatches, getLiveMatches, getStandings, getRequestCount, resetRequestCount } from "./api.ts";
+import { getMatches, getLiveMatches, getRequestCount, resetRequestCount } from "./api.ts";
 import { upsertMatches, upsertStandings, updatePipelineMeta, readBudget } from "./db.ts";
+import { computeStandings } from "./standings.ts";
 
 export interface FetchDataResponse {
   fetched: boolean;
@@ -99,15 +100,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
       budget.api_requests_today = 0;
     }
 
-    // Budget check — skip if exhausted
+    // Budget check — skip API calls if exhausted but still compute standings
     if (budget.api_requests_today >= budget.api_budget) {
-      console.log("[fetch-data] Budget exhausted, skipping fetch");
+      console.log("[fetch-data] Budget exhausted, computing standings from cache");
+      let standingsUpserted = false;
+      try {
+        const standings = await computeStandings(POOL);
+        if (standings.length > 0) {
+          const count = await upsertStandings(null, 1, 2026, standings, true);
+          standingsUpserted = count > 0;
+        }
+      } catch (e: any) {
+        console.warn("[fetch-data] Standings computation error:", e.message);
+      }
       return new Response(
         JSON.stringify({
           fetched: false,
           reason: "API budget exhausted for today",
           matchesUpserted: 0,
-          standingsUpserted: false,
+          standingsUpserted,
         }),
         { status: 200, headers },
       );
@@ -260,44 +271,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
           matchesUpserted += liveCount;
         }
       }
-
-      // Fetch standings (World Cup standings for now)
-      if (schedule.endpoints.includes("standings")) {
-        const standings = await getStandings(1, 2026);
-        if (standings.length > 0) {
-          const count = await upsertStandings(null, 1, 2026, standings);
-          standingsUpserted = count > 0;
-          console.log(`[fetch-data] Upserted ${count} standings rows`);
-        }
-      }
-
-      // ── Update pipeline_meta on success ──────────────────────────────────
-      await updatePipelineMeta(null, {
-        last_fetched: now.toISOString(),
-        next_planned: schedule.nextPlanned.toISOString(),
-        mode: mode as string,
-        error_count: 0,
-        last_error: null,
-        api_requests_today: budget.api_requests_today + getRequestCount(),
-      });
     } catch (fetchError: any) {
       console.error("[fetch-data] Fetch/upsert error:", fetchError.message);
       errors.push(fetchError.message);
+    }
 
-      // Update pipeline_meta with error info
+    // Always compute standings (does not depend on API calls)
+    try {
+      const standings = await computeStandings(POOL);
+      if (standings.length > 0) {
+        const count = await upsertStandings(null, 1, 2026, standings, true);
+        standingsUpserted = count > 0;
+        console.log(`[fetch-data] Computed + upserted ${count} standings rows`);
+      }
+    } catch (computeErr: any) {
+      console.error("[fetch-data] Standings computation error:", computeErr.message);
+      errors.push(`standings: ${computeErr.message}`);
+    }
+
+    // ── Update pipeline_meta ────────────────────────────────────────────────
+    try {
       await updatePipelineMeta(null, {
         last_fetched: now.toISOString(),
         next_planned: schedule.nextPlanned.toISOString(),
         mode: mode as string,
-        error_count: (pipelineMeta.error_count || 0) + 1,
-        last_error: fetchError.message,
+        error_count: errors.length,
+        last_error: errors.length > 0 ? errors[errors.length - 1] : null,
         api_requests_today: budget.api_requests_today + getRequestCount(),
-      }).catch((err) => {
-        console.warn(
-          "[fetch-data] Failed to update error in pipeline_meta:",
-          err.message,
-        );
       });
+    } catch (metaErr: any) {
+      console.warn("[fetch-data] pipeline_meta update error:", metaErr.message);
     }
 
     // ── Build response ─────────────────────────────────────────────────────

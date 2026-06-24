@@ -105,6 +105,7 @@ export async function upsertStandings(
   leagueApiId: number,
   season: number,
   standings: any[],
+  directTeamIds = false,
 ): Promise<number> {
   if (!standings || standings.length === 0) return 0;
 
@@ -114,7 +115,34 @@ export async function upsertStandings(
 
   const client = await POOL.connect();
   try {
-    // ── Auto-create unknown teams ──────────────────────────────────────────
+    // ── When teamIds are already DB internal IDs, use them directly ──────────
+    if (directTeamIds) {
+      let count = 0;
+      for (const group of standings) {
+        if (!group.teams) continue;
+        for (const t of group.teams) {
+          if (!t.teamId) continue;
+          await client.query(
+            `INSERT INTO standings (league_id, season, group_name, team_id, rank, points, played, wins, draws, losses, goals_for, goals_against, goal_diff)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+             ON CONFLICT (league_id, season, group_name, team_id) DO UPDATE SET
+               rank = EXCLUDED.rank, points = EXCLUDED.points,
+               played = EXCLUDED.played, wins = EXCLUDED.wins,
+               draws = EXCLUDED.draws, losses = EXCLUDED.losses,
+               goals_for = EXCLUDED.goals_for, goals_against = EXCLUDED.goals_against,
+               goal_diff = EXCLUDED.goal_diff, updated_at = now()`,
+            [internalLeagueId, season, group.group, t.teamId,
+             t.rank, t.points ?? 0, t.played ?? 0, t.wins ?? 0,
+             t.draws ?? 0, t.losses ?? 0, t.goalsFor ?? 0,
+             t.goalsAgainst ?? 0, t.goalDiff ?? 0],
+          );
+          count++;
+        }
+      }
+      return count;
+    }
+
+    // ── When teamIds are API IDs, convert via teamMap ────────────────────────
     const seen = new Set<number>();
     for (const group of standings) {
       if (!group.teams) continue;
@@ -132,7 +160,6 @@ export async function upsertStandings(
       }
     }
 
-    // ── Upsert standings rows ───────────────────────────────────────────────
     let count = 0;
     for (const group of standings) {
       if (!group.teams) continue;
