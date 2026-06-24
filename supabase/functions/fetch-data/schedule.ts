@@ -212,13 +212,43 @@ export function getSchedule(options: ScheduleOptions): ScheduleDecision {
           endpoints,
         };
       }
+
+      // Deep sleep: next match is > 3h away → sleep until 30 min before
+      if (nextMatch && (nextMatch.getTime() - now.getTime()) > 3 * 60 * 60 * 1000) {
+        const hoursAway = Math.round((nextMatch.getTime() - now.getTime()) / 3600000);
+        const wakeTime = new Date(nextMatch.getTime() - 30 * 60 * 1000);
+        reasons.push(
+          `worldcup: sin partidos vivos, próximo en ${hoursAway}h → sleep hasta las ${String(wakeTime.getHours()).padStart(2, "0")}:${String(wakeTime.getMinutes()).padStart(2, "0")} ART`,
+        );
+        return {
+          shouldFetch: false,
+          reasons,
+          nextPlanned: wakeTime,
+          endpoints: [],
+        };
+      }
     }
 
-    // Default: every 2h
+    // No known fixtures or next match > 2h but ≤ 3h away: check last fetch
     const lastFetchTime = lastFetched ? new Date(lastFetched) : null;
     const hoursSinceLastFetch = lastFetchTime
       ? (now.getTime() - lastFetchTime.getTime()) / (60 * 60 * 1000)
       : 99;
+
+    // Deep sleep with next match at known distance
+    if (nextMatch && (nextMatch.getTime() - now.getTime()) > 2 * 60 * 60 * 1000) {
+      const hoursAway = Math.round((nextMatch.getTime() - now.getTime()) / 3600000);
+      const wakeTime = new Date(nextMatch.getTime() - 30 * 60 * 1000);
+      reasons.push(
+        `worldcup: sin partidos vivos, próximo en ${hoursAway}h → sleep hasta las ${String(wakeTime.getHours()).padStart(2, "0")}:${String(wakeTime.getMinutes()).padStart(2, "0")} ART`,
+      );
+      return {
+        shouldFetch: false,
+        reasons,
+        nextPlanned: wakeTime,
+        endpoints: [],
+      };
+    }
 
     if (hoursSinceLastFetch < 2) {
       reasons.push(
@@ -297,6 +327,21 @@ export function getSchedule(options: ScheduleOptions): ScheduleDecision {
       reasons,
       nextPlanned: new Date(now.getTime() + 15 * 60 * 1000),
       endpoints,
+    };
+  }
+
+  // Deep sleep: next match is > 3h away → sleep until 30 min before
+  if (nextMatch && (nextMatch.getTime() - now.getTime()) > 3 * 60 * 60 * 1000) {
+    const hoursAway = Math.round((nextMatch.getTime() - now.getTime()) / 3600000);
+    const wakeTime = new Date(nextMatch.getTime() - 30 * 60 * 1000);
+    reasons.push(
+      `leagues: sin partidos vivos, próximo en ${hoursAway}h → sleep hasta las ${String(wakeTime.getHours()).padStart(2, "0")}:${String(wakeTime.getMinutes()).padStart(2, "0")} ART`,
+    );
+    return {
+      shouldFetch: false,
+      reasons,
+      nextPlanned: wakeTime,
+      endpoints: [],
     };
   }
 
