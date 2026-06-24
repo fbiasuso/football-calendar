@@ -121,123 +121,120 @@ function App() {
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                {/* Auto-polling toggle — 3 estados: OFF / ON activo / ON dormido */}
-                <button
-                  onClick={() => !fetchPaused && setAutoPolling(!autoPollingEnabled)}
-                  disabled={fetchPaused}
-                  title={
-                    fetchPaused
-                      ? 'Actualizaciones desactivadas'
-                      : autoPollingEnabled
-                        ? hasLiveMatches
-                          ? `Auto-actualización cada ${hasMatchInLast5 ? '1' : '5'} min`
-                          : 'Esperando partidos en vivo...'
-                        : 'Activar actualización automática'
-                  }
-                  className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    autoPollingEnabled
-                      ? hasLiveMatches
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
-                      : 'hover:bg-gray-100 text-gray-600'
-                  }`}
-                  aria-label={autoPollingEnabled ? 'Auto-actualizar ON' : 'Auto-actualizar OFF'}
-                >
-                  <div className="flex items-center gap-1">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {autoPollingEnabled && hasLiveMatches && (
-                      <span className="text-[9px] font-bold">{hasMatchInLast5 ? '1' : '5'}min</span>
+              <div className="flex items-center gap-1.5">
+                {HAS_SUPABASE ? (
+                  <>
+                    {/* + Forzar actualización (Supabase) */}
+                    <button
+                      onClick={async () => {
+                        if (forceFetchLoading) return;
+                        setForceFetchLoading(true);
+                        try {
+                          const store = useAppStore.getState();
+                          await store.forceRefresh();
+                        } catch (err) {
+                          console.error('Force fetch failed:', err);
+                        } finally {
+                          setTimeout(() => setForceFetchLoading(false), 30000);
+                        }
+                      }}
+                      disabled={forceFetchLoading}
+                      className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        forceFetchLoading ? 'text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                      }`}
+                      title={forceFetchLoading ? 'Esperá 30s' : 'Forzar actualización desde API'}
+                      aria-label="Forzar actualización"
+                    >
+                      <svg className={`w-5 h-5 ${forceFetchLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+
+                    {/* ⚡ Fast Mode (Supabase) */}
+                    <button
+                      onClick={async () => {
+                        const newVal = !fastMode;
+                        try {
+                          await toggleFastMode(newVal);
+                          setFastMode(newVal);
+                        } catch (err) {
+                          console.error('Failed to toggle fast mode:', err);
+                        }
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        fastMode
+                          ? 'bg-green-100 text-green-700'
+                          : 'hover:bg-gray-100 text-gray-600'
+                      }`}
+                      title={fastMode ? 'Modo rápido activo' : 'Activar modo rápido'}
+                      aria-label="Modo rápido"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </button>
+
+                    {/* 📊 Budget indicator (Supabase) */}
+                    {budget && (
+                      <span
+                        className={`text-[11px] font-mono px-1.5 py-1 rounded ${
+                          budget.api_requests_today >= 80
+                            ? 'bg-red-100 text-red-700'
+                            : budget.api_requests_today >= 50
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'text-gray-400'
+                        }`}
+                        title={`API-Football: ${budget.api_budget - budget.api_requests_today} restantes hoy`}
+                      >
+                        {budget.api_requests_today}/{budget.api_budget}
+                      </span>
                     )}
-                  </div>
-                </button>
-
-                {/* Refresh button */}
-                <button
-                  onClick={refresh}
-                  disabled={isLoading || fetchPaused}
-                  title={fetchPaused ? 'Actualizaciones desactivadas' : 'Refrescar partidos'}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Refrescar"
-                >
-                  <svg 
-                    className={`w-5 h-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                </button>
-
-                {/* ── Fast Mode Toggle (Supabase only) ── */}
-                {HAS_SUPABASE && (
-                  <button
-                    onClick={async () => {
-                      const newVal = !fastMode;
-                      try {
-                        await toggleFastMode(newVal);
-                        setFastMode(newVal);
-                      } catch (err) {
-                        console.error('Failed to toggle fast mode:', err);
+                  </>
+                ) : (
+                  <>
+                    {/* Auto-polling toggle (non-Supabase) */}
+                    <button
+                      onClick={() => !fetchPaused && setAutoPolling(!autoPollingEnabled)}
+                      disabled={fetchPaused}
+                      title={
+                        fetchPaused
+                          ? 'Actualizaciones desactivadas'
+                          : autoPollingEnabled && hasLiveMatches
+                            ? `Cada ${hasMatchInLast5 ? '1' : '5'} min`
+                            : 'Activar auto-actualización'
                       }
-                    }}
-                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                      fastMode
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-700 text-gray-300'
-                    }`}
-                    title={fastMode ? 'Modo rápido activo — fetch cada 5 min' : 'Activar modo rápido'}
-                    aria-label="Toggle fast mode"
-                  >
-                    ⚡ {fastMode ? 'En Vivo' : 'Modo Rápido'}
-                  </button>
-                )}
+                      className={`p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        autoPollingEnabled
+                          ? hasLiveMatches
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-amber-100 text-amber-700'
+                          : 'hover:bg-gray-100 text-gray-600'
+                      }`}
+                      aria-label={autoPollingEnabled ? 'Auto-actualizar ON' : 'Auto-actualizar OFF'}
+                    >
+                      <div className="flex items-center gap-1">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {autoPollingEnabled && hasLiveMatches && (
+                          <span className="text-[9px] font-bold">{hasMatchInLast5 ? '1' : '5'}min</span>
+                        )}
+                      </div>
+                    </button>
 
-                {/* ── Force Fetch Button (Supabase only) ── */}
-                {HAS_SUPABASE && (
-                  <button
-                    onClick={async () => {
-                      if (forceFetchLoading) return;
-                      setForceFetchLoading(true);
-                      try {
-                        const store = useAppStore.getState();
-                        await store.forceRefresh();
-                      } catch (err) {
-                        console.error('Force fetch failed:', err);
-                      } finally {
-                        setTimeout(() => setForceFetchLoading(false), 30000);
-                      }
-                    }}
-                    disabled={forceFetchLoading}
-                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                      forceFetchLoading
-                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-500'
-                    }`}
-                    title={forceFetchLoading ? 'Esperá 30s antes de actualizar de nuevo' : 'Forzar actualización desde API'}
-                    aria-label="Force fetch"
-                  >
-                    {forceFetchLoading ? '⏳' : '🔄'} Actualizar
-                  </button>
-                )}
-
-                {/* ── Budget Indicator (Supabase only) ── */}
-                {HAS_SUPABASE && budget && (
-                  <span
-                    className={`text-xs font-mono px-2 py-1 rounded ${
-                      budget.api_requests_today >= 80
-                        ? 'bg-red-900/50 text-red-300'
-                        : budget.api_requests_today >= 50
-                          ? 'bg-yellow-900/50 text-yellow-300'
-                          : 'bg-gray-700 text-gray-400'
-                    }`}
-                    title={`API-Football requests: ${budget.api_budget - budget.api_requests_today} restantes hoy`}
-                  >
-                    📊 {budget.api_requests_today}/{budget.api_budget}
-                  </span>
+                    {/* Refresh button (non-Supabase) */}
+                    <button
+                      onClick={refresh}
+                      disabled={isLoading || fetchPaused}
+                      title={fetchPaused ? 'Actualizaciones desactivadas' : 'Refrescar partidos'}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Refrescar"
+                    >
+                      <svg className={`w-5 h-5 text-gray-600 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </>
                 )}
 
                 {fetchPaused && (
