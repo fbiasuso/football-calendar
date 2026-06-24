@@ -16,6 +16,7 @@ const useAppStore = create(
       isLoading: false,
       error: null,
       autoPollingEnabled: false,
+      fastMode: false,
       lastUpdated: null,
 
       // World Cup navigation
@@ -58,6 +59,8 @@ const useAppStore = create(
       setError: (error) => set({ error }),
       
       setAutoPolling: (enabled) => set({ autoPollingEnabled: enabled }),
+
+      setFastMode: (enabled) => set({ fastMode: enabled }),
 
       // World Cup navigation setters
       setCurrentView: (view) => set((state) => ({
@@ -121,6 +124,26 @@ const useAppStore = create(
           setLoading(false);
         }
       },
+
+      // Force a full API refresh via Edge Function (Supabase mode only)
+      forceRefresh: async () => {
+        const { setLoading, setMatches, setError } = get();
+        setLoading(true);
+        try {
+          const { triggerForceFetch } = await import('../api/supabaseAdapter.js');
+          const result = await triggerForceFetch();
+          // Refetch matches from DB — Realtime will also propagate
+          const { getMatches } = await import('../api/adapter.js');
+          const matches = await getMatches(get().selectedDate);
+          setMatches(matches);
+          return result;
+        } catch (err) {
+          setError(err.message || 'Error al forzar actualización');
+          return null;
+        } finally {
+          setLoading(false);
+        }
+      },
       
       // Clear error
       clearError: () => set({ error: null }),
@@ -134,6 +157,7 @@ const useAppStore = create(
         selectedLeagues: state.selectedLeagues,
         sortMode: state.sortMode,
         autoPollingEnabled: state.autoPollingEnabled,
+        fastMode: state.fastMode,
         wcPicks: state.wcPicks,
         wcSlots: state.wcSlots,
         bracketMode: state.bracketMode,

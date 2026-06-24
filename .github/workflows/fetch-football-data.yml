@@ -1,47 +1,51 @@
-name: fetch-football-data
+# DEPRECATED: Data fetching migrated to Supabase Edge Function (supabase/functions/fetch-data/).
+# Scheduled via cron-job.org → POST to Edge Function URL.
+# Keep file for rollback — uncomment to re-enable.
 
-on:
-  schedule:
-    # UTC: */30 11-23 = 8AM-8PM ART (UTC-3)
-    # UTC: */30 0-4 = 9PM-1AM ART
-    # Ambas cubren la ventana activa 8AM-1AM ART
-    - cron: '*/30 11-23,0-4 * * *'
-    # Un intento extra a las 6AM ART (9 UTC) para agenda del día
-    - cron: '0 9 * * *'
-  workflow_dispatch: {}
-
-jobs:
-  fetch:
-    if: github.event_name == 'workflow_dispatch' || vars.DATA_FETCH_PAUSED != 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Run data fetch
-        run: node scripts/fetch-data.js
-        env:
-          VITE_API_FOOTBALL_API_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-          # Manual triggers bypass the scheduler and fetch immediately
-          FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
-
-      - name: Ensure default status.json
-        run: |
-          if [ ! -f data/status.json ]; then
-            echo '{"dataFetchPaused":false}' > data/status.json
-          fi
-
-      - name: Deploy data to gh-pages
-        if: success()
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./data
-          destination_dir: ./data
-          keep_files: true
-          allow_empty_commit: true
+# name: fetch-football-data
+#
+# on:
+#   schedule:
+#     # UTC: */30 11-23 = 8AM-8PM ART (UTC-3)
+#     # UTC: */30 0-4 = 9PM-1AM ART
+#     # Ambas cubren la ventana activa 8AM-1AM ART
+#     - cron: '*/30 11-23,0-4 * * *'
+#     # Un intento extra a las 6AM ART (9 UTC) para agenda del día
+#     - cron: '0 9 * * *'
+#   workflow_dispatch: {}
+#
+# jobs:
+#   fetch:
+#     if: github.event_name == 'workflow_dispatch' || vars.DATA_FETCH_PAUSED != 'true'
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#     steps:
+#       - uses: actions/checkout@v4
+#
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: 20
+#
+#       - name: Run data fetch
+#         run: node scripts/fetch-data.js
+#         env:
+#           VITE_API_FOOTBALL_API_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+#           # Manual triggers bypass the scheduler and fetch immediately
+#           FORCE: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+#
+#       - name: Ensure default status.json
+#         run: |
+#           if [ ! -f data/status.json ]; then
+#             echo '{"dataFetchPaused":false}' > data/status.json
+#           fi
+#
+#       - name: Deploy data to gh-pages
+#         if: success()
+#         uses: peaceiris/actions-gh-pages@v4
+#         with:
+#           github_token: ${{ secrets.GITHUB_TOKEN }}
+#           publish_dir: ./data
+#           destination_dir: ./data
+#           keep_files: true
+#           allow_empty_commit: true
