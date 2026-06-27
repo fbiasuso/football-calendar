@@ -33,10 +33,22 @@ async function query(sql: string, params?: any[]): Promise<any[]> {
   }
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-request-id",
+  "Access-Control-Max-Age": "86400",
+};
+
 Deno.serve(async (req: Request): Promise<Response> => {
-  const headers = { "Content-Type": "application/json" };
+  const headers = { "Content-Type": "application/json", ...CORS_HEADERS };
 
   try {
+    // ── CORS preflight ────────────────────────────────────────────────────
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers });
+    }
+
     // ── Guard: only POST ───────────────────────────────────────────────────
     if (req.method !== "POST") {
       return new Response(
