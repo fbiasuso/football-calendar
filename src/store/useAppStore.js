@@ -132,13 +132,20 @@ const useAppStore = create(
         try {
           const { triggerForceFetch } = await import('../api/supabaseAdapter.js');
           const result = await triggerForceFetch();
+
+          // Check if the edge function reported any errors
+          if (result?.errors?.length > 0 && result.matchesUpserted === 0) {
+            setError('No se pudieron cargar los partidos. La fuente de datos no está disponible por el momento. Probá de nuevo más tarde.');
+            return result;
+          }
+
           // Refetch matches from DB — Realtime will also propagate
           const { getMatches } = await import('../api/adapter.js');
           const matches = await getMatches(get().selectedDate);
           setMatches(matches);
           return result;
         } catch (err) {
-          setError(err.message || 'Error al forzar actualización');
+          setError('Error al actualizar. La fuente de datos no está disponible por el momento.');
           return null;
         } finally {
           setLoading(false);
