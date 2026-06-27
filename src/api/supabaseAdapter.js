@@ -278,9 +278,8 @@ export function subscribeMatches(date, onMatchChange) {
  * @returns {Promise<Object>} Edge Function response
  */
 export async function triggerForceFetch() {
-  const { data, error } = await supabase.functions.invoke('fetch-data', {
+  const { data, error } = await supabase.functions.invoke('fetch-data?force=true', {
     method: 'POST',
-    body: { force: true },
   });
   if (error) throw new Error(`Force fetch failed: ${error.message}`);
   return data;
