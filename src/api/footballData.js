@@ -2,6 +2,13 @@
 // Documentation: https://www.football-data.org/documentation
 // Using Vite proxy to avoid CORS issues
 
+import { INTERNAL_LEAGUE_IDS, LEAGUE_GROUPS } from '../utils/leagueConfig.js';
+
+// Build reverse map: internal ID → display name
+const LEAGUE_NAMES = Object.fromEntries(
+  Object.entries(INTERNAL_LEAGUE_IDS).map(([name, id]) => [id, name])
+);
+
 const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 const PROXY_URL = '/api/football-data';
 
@@ -94,15 +101,19 @@ export async function getLiveMatches() {
   return (data.matches || []).map(normalizeMatch);
 }
 
-// Get all available competitions
+// Get our configured leagues (no API call needed — uses internal config)
 export async function getCompetitions() {
-  const data = await fetchWithRetry('/competitions');
-  return (data.competitions || []).map(c => ({
-    id: c.id,
-    name: c.name,
-    code: c.code,
-    area: c.area?.name,
-  }));
+  // Build from our internal config so IDs match normalizeMatch (internal IDs 1-13)
+  const leagues = [];
+  for (const [groupKey, group] of Object.entries(LEAGUE_GROUPS)) {
+    for (const name of group.leagues) {
+      const id = INTERNAL_LEAGUE_IDS[name];
+      if (id) {
+        leagues.push({ id, name, code: null, area: group.name });
+      }
+    }
+  }
+  return leagues;
 }
 
 // Get single match details (for aggregate score in knockout ties)
@@ -253,12 +264,14 @@ function normalizeMatch(match) {
   const score = match.score?.fullTime || {};
   const externalLeagueId = match.competition?.id;
 
+  const internalLeagueId = EXTERNAL_TO_INTERNAL_ID[externalLeagueId] || externalLeagueId;
+
   return {
     id: String(match.id),
     title: `${homeTeam.name} vs ${awayTeam.name}`,
     date: new Date(match.utcDate).getTime(),
-    league: match.competition?.name || 'Otros',
-    leagueId: EXTERNAL_TO_INTERNAL_ID[externalLeagueId] || externalLeagueId,
+    league: LEAGUE_NAMES[internalLeagueId] || match.competition?.name || 'Otros',
+    leagueId: internalLeagueId,
     competitionCode: match.competition?.code || null,
     stage: match.stage || null, // ROUND_OF_16, QUARTER_FINALS, etc.
     matchday: match.matchday || null,
