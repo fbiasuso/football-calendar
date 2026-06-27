@@ -1,5 +1,5 @@
 // LeagueFilter component - Checkbox filters for leagues
-import { getLeaguesByGroup } from '../../utils/leagueConfig.js';
+import { getLeaguesByGroup, LEAGUE_DISPLAY_NAMES } from '../../utils/leagueConfig.js';
 import useAppStore from '../../store/useAppStore.js';
 
 export default function LeagueFilter() {
@@ -14,19 +14,19 @@ export default function LeagueFilter() {
             {name}
           </h3>
           <div className="space-y-1">
-            {leagues.map(league => (
+            {leagues.map(identifier => (
               <label 
-                key={league}
+                key={identifier}
                 className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
               >
                 <input
                   type="checkbox"
-                  checked={selectedLeagues.includes(league)}
-                  onChange={() => toggleLeague(league)}
+                  checked={selectedLeagues.includes(identifier)}
+                  onChange={() => toggleLeague(identifier)}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-600">
-                  {league}
+                  {LEAGUE_DISPLAY_NAMES[identifier] || identifier}
                 </span>
               </label>
             ))}

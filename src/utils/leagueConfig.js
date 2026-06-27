@@ -21,6 +21,23 @@ export const INTERNAL_LEAGUE_IDS = {
 // Alias for backward compatibility
 export const LEAGUE_IDS = INTERNAL_LEAGUE_IDS;
 
+// Spanish display names for UI (identifier → display name)
+export const LEAGUE_DISPLAY_NAMES = {
+  'World Cup 2026': 'Mundial 2026',
+  'UEFA Champions League': 'Champions League',
+  'Premier League': 'Premier League',
+  'LaLiga': 'LaLiga',
+  'Bundesliga': 'Bundesliga',
+  'Serie A': 'Serie A',
+  'FA Cup': 'FA Cup',
+  'Copa del Rey': 'Copa del Rey',
+  'DFB-Pokal': 'DFB-Pokal',
+  'Coppa Italia': 'Coppa Italia',
+  'EFL Cup': 'EFL Cup',
+  'Copa Libertadores': 'Copa Libertadores',
+  'Argentine Liga Profesional': 'Liga Profesional',
+};
+
 // football-data.org v4 competition IDs (external — used by the API)
 export const FOOTBALL_DATA_COMPETITION_IDS = {
   'World Cup 2026': 2000,

@@ -8,6 +8,12 @@
 // Spec: openspec/specs/supabase-consumption/spec.md
 
 import { supabase } from '../lib/supabase.js';
+import { INTERNAL_LEAGUE_IDS, LEAGUE_DISPLAY_NAMES } from '../utils/leagueConfig.js';
+
+// Build reverse map: internal ID → identifier (e.g. 1 → "World Cup 2026")
+const LEAGUE_NAME_FROM_ID = Object.fromEntries(
+  Object.entries(INTERNAL_LEAGUE_IDS).map(([name, id]) => [id, name])
+);
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -29,11 +35,14 @@ import { supabase } from '../lib/supabase.js';
  * @returns {Object} Normalized Match
  */
 function normalizeMatch(row) {
+  const leagueIdentifier = LEAGUE_NAME_FROM_ID[row.league_id];
+
   return {
     id: row.id,
     title: `${row.home_team?.name || 'N/A'} vs ${row.away_team?.name || 'N/A'}`,
     date: new Date(row.date).getTime(),
-    league: row.league?.name || 'Otros',
+    league: LEAGUE_DISPLAY_NAMES[leagueIdentifier] || row.league?.name || 'Otros',
+    leagueIdentifier: leagueIdentifier,
     leagueId: row.league_id,
     competitionCode: null,
     stage: null,

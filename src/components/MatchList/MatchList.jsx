@@ -16,7 +16,7 @@ export default function MatchList({ matches }) {
     if (!selectedLeagues || selectedLeagues.length === 0) {
       filtered = matches;
     } else {
-      filtered = matches.filter(m => selectedLeagues.includes(m.league));
+      filtered = matches.filter(m => selectedLeagues.includes(m.leagueIdentifier || m.league));
     }
     
     if (sortMode === 'time') {

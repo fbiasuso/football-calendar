@@ -2,7 +2,7 @@
 // Documentation: https://www.api-sports.io/documentation/football/v3
 // Using Vite proxy to avoid CORS issues
 
-import { LEAGUE_IDS } from '../utils/leagueConfig.js';
+import { LEAGUE_IDS, LEAGUE_DISPLAY_NAMES } from '../utils/leagueConfig.js';
 
 const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 const PROXY_URL = '/api/api-football';
@@ -98,16 +98,17 @@ function normalizeMatch(fixture) {
   const awayTeam = teams.away || {};
   const status = f.status || {};
 
-  // Map API-Football league ID back to our display name
-  const leagueName = Object.keys(LEAGUE_IDS).find(
+  // Map API-Football league ID back to our identifier
+  const leagueIdentifier = Object.keys(LEAGUE_IDS).find(
     key => LEAGUE_IDS[key] === league.id
-  ) || 'Otros';
+  );
 
   return {
     id: String(f.id),
     title: `${homeTeam.name || 'N/A'} vs ${awayTeam.name || 'N/A'}`,
     date: new Date(f.date || f.timestamp * 1000).getTime(),
-    league: leagueName,
+    league: LEAGUE_DISPLAY_NAMES[leagueIdentifier] || leagueIdentifier || 'Otros',
+    leagueIdentifier: leagueIdentifier,
     leagueId: league.id,
     competitionCode: null,
     stage: null,

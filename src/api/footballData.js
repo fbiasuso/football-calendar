@@ -2,10 +2,13 @@
 // Documentation: https://www.football-data.org/documentation
 // Using Vite proxy to avoid CORS issues
 
-import { INTERNAL_LEAGUE_IDS, LEAGUE_GROUPS } from '../utils/leagueConfig.js';
+import { INTERNAL_LEAGUE_IDS, LEAGUE_GROUPS, LEAGUE_DISPLAY_NAMES } from '../utils/leagueConfig.js';
 
-// Build reverse map: internal ID → display name
-const LEAGUE_NAMES = Object.fromEntries(
+// Build reverse maps
+// identifier (e.g. "World Cup 2026") → internal ID
+const LEAGUE_ID_FROM_NAME = INTERNAL_LEAGUE_IDS;
+// internal ID → identifier
+const LEAGUE_NAME_FROM_ID = Object.fromEntries(
   Object.entries(INTERNAL_LEAGUE_IDS).map(([name, id]) => [id, name])
 );
 
@@ -106,10 +109,10 @@ export async function getCompetitions() {
   // Build from our internal config so IDs match normalizeMatch (internal IDs 1-13)
   const leagues = [];
   for (const [groupKey, group] of Object.entries(LEAGUE_GROUPS)) {
-    for (const name of group.leagues) {
-      const id = INTERNAL_LEAGUE_IDS[name];
+    for (const identifier of group.leagues) {
+      const id = INTERNAL_LEAGUE_IDS[identifier];
       if (id) {
-        leagues.push({ id, name, code: null, area: group.name });
+        leagues.push({ id, name: identifier, code: null, area: group.name });
       }
     }
   }
@@ -265,12 +268,14 @@ function normalizeMatch(match) {
   const externalLeagueId = match.competition?.id;
 
   const internalLeagueId = EXTERNAL_TO_INTERNAL_ID[externalLeagueId] || externalLeagueId;
+  const leagueIdentifier = LEAGUE_NAME_FROM_ID[internalLeagueId];
 
   return {
     id: String(match.id),
     title: `${homeTeam.name} vs ${awayTeam.name}`,
     date: new Date(match.utcDate).getTime(),
-    league: LEAGUE_NAMES[internalLeagueId] || match.competition?.name || 'Otros',
+    league: LEAGUE_DISPLAY_NAMES[leagueIdentifier] || match.competition?.name || 'Otros',
+    leagueIdentifier: leagueIdentifier,
     leagueId: internalLeagueId,
     competitionCode: match.competition?.code || null,
     stage: match.stage || null, // ROUND_OF_16, QUARTER_FINALS, etc.
