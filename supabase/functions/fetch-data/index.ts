@@ -11,9 +11,8 @@ const { Pool } = pg;
 const POOL = new Pool({ connectionString: Deno.env.get("SUPABASE_DB_URL"), max: 1 });
 
 import { getSchedule, isWorldCupPeriod, type ScheduleDecision } from "./schedule.ts";
-import { getMatches, getLiveMatches } from "./api.ts";
+import { getMatches, getLiveMatches, getStandings } from "./api.ts";
 import { upsertMatches, upsertStandings, updatePipelineMeta } from "./db.ts";
-import { computeStandings } from "./standings.ts";
 
 export interface FetchDataResponse {
   fetched: boolean;
@@ -238,17 +237,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       errors.push(fetchError.message);
     }
 
-    // Always compute standings (does not depend on API calls)
+    // Fetch official standings from football-data.org API
     try {
-      const standings = await computeStandings(POOL);
+      const standings = await getStandings(1, 2026);
       if (standings.length > 0) {
-        const count = await upsertStandings(null, 1, 2026, standings, true);
+        const count = await upsertStandings(null, 1, 2026, standings, false);
         standingsUpserted = count > 0;
-        console.log(`[fetch-data] Computed + upserted ${count} standings rows`);
+        console.log(`[fetch-data] Upserted ${count} official standings rows`);
       }
-    } catch (computeErr: any) {
-      console.error("[fetch-data] Standings computation error:", computeErr.message);
-      errors.push(`standings: ${computeErr.message}`);
+    } catch (standingsErr: any) {
+      console.error("[fetch-data] Standings fetch error:", standingsErr.message);
+      errors.push(`standings: ${standingsErr.message}`);
     }
 
     // ── Update pipeline_meta ────────────────────────────────────────────────
