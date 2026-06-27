@@ -2,9 +2,9 @@
 // Documentation: https://www.api-sports.io/documentation/football/v3
 // Using Vite proxy to avoid CORS issues
 
-import { API_FOOTBALL_LEAGUE_IDS } from '../utils/leagueConfig.js';
+import { LEAGUE_IDS } from '../utils/leagueConfig.js';
 
-const API_KEY = import.meta.env.VITE_API_FOOTBALL_API_KEY;
+const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 const PROXY_URL = '/api/api-football';
 
 async function fetchWithRetry(endpoint, retries = 0) {
@@ -99,8 +99,8 @@ function normalizeMatch(fixture) {
   const status = f.status || {};
 
   // Map API-Football league ID back to our display name
-  const leagueName = Object.keys(API_FOOTBALL_LEAGUE_IDS).find(
-    key => API_FOOTBALL_LEAGUE_IDS[key] === league.id
+  const leagueName = Object.keys(LEAGUE_IDS).find(
+    key => LEAGUE_IDS[key] === league.id
   ) || 'Otros';
 
   return {
@@ -141,7 +141,7 @@ function normalizeMatch(fixture) {
  * @returns {number[]}
  */
 function getSupportedLeagueIds() {
-  return Object.values(API_FOOTBALL_LEAGUE_IDS);
+  return Object.values(LEAGUE_IDS);
 }
 
 function formatDate(date) {
@@ -233,7 +233,7 @@ export async function getLiveMatches() {
  * @returns {Promise<Object[]>}
  */
 export async function getCompetitions() {
-  return Object.entries(API_FOOTBALL_LEAGUE_IDS).map(([name, id]) => ({
+  return Object.entries(LEAGUE_IDS).map(([name, id]) => ({
     id: String(id),
     name,
     code: null,

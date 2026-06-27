@@ -1,10 +1,10 @@
-// API-Football v3 Client for Deno Edge Function
-// Port of scripts/lib/api.js
+// football-data.org v4 API Client for Deno Edge Function
+// Documentation: https://www.football-data.org/documentation
 // Uses native fetch with retry logic.
 
-const API_BASE_URL = "https://v3.football.api-sports.io";
+const API_BASE_URL = "https://api.football-data.org/v4";
 
-// ── Request Counter ─────────────────────────────────────────────────────────
+// ── Request Counter (no-op — football-data.org uses rate limiting, not daily budget) ─
 
 let _requestCount = 0;
 
@@ -16,22 +16,46 @@ export function resetRequestCount(): void {
   _requestCount = 0;
 }
 
-// Inline league IDs (matches src/utils/leagueConfig.js)
-const API_FOOTBALL_LEAGUE_IDS: Record<string, number> = {
-  "World Cup 2026": 1,
-  "UEFA Champions League": 2,
-  "Copa Libertadores": 13,
-  "Copa Sudamericana": 11,
-  "Premier League": 39,
-  "FA Cup": 45,
-  "EFL Cup": 48,
-  "LaLiga": 140,
-  "Copa del Rey": 143,
-  "Supercopa": 556,
-  "Serie A": 135,
-  "Coppa Italia": 137,
-  "Bundesliga": 78,
-  "DFB-Pokal": 81,
+// ── Internal League ID Mapper ───────────────────────────────────────────────
+
+// Maps our internal league IDs → football-data.org competition IDs
+const INTERNAL_TO_EXTERNAL: Record<number, number> = {
+  1: 2000,  // World Cup 2026
+  2: 2001,  // UEFA Champions League
+  3: 2021,  // Premier League
+  4: 2014,  // LaLiga
+  5: 2002,  // Bundesliga
+  6: 2019,  // Serie A
+  7: 2055,  // FA Cup
+  8: 2079,  // Copa del Rey
+  9: 2011,  // DFB-Pokal
+  10: 2122, // Coppa Italia
+  11: 2139, // EFL Cup
+  12: 2152, // Copa Libertadores
+  13: 2024, // Argentine Liga Profesional
+};
+
+// Reverse map: external → internal
+const EXTERNAL_TO_INTERNAL: Record<number, number> = {};
+for (const [internal, external] of Object.entries(INTERNAL_TO_EXTERNAL)) {
+  EXTERNAL_TO_INTERNAL[external] = Number(internal);
+}
+
+// League display names keyed by internal ID
+const LEAGUE_NAMES: Record<number, string> = {
+  1: "World Cup 2026",
+  2: "UEFA Champions League",
+  3: "Premier League",
+  4: "LaLiga",
+  5: "Bundesliga",
+  6: "Serie A",
+  7: "FA Cup",
+  8: "Copa del Rey",
+  9: "DFB-Pokal",
+  10: "Coppa Italia",
+  11: "EFL Cup",
+  12: "Copa Libertadores",
+  13: "Argentine Liga Profesional",
 };
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -92,9 +116,9 @@ export async function fetchWithRetry(
   endpoint: string,
   retries = 0,
 ): Promise<any> {
-  const apiKey = Deno.env.get("VITE_API_FOOTBALL_API_KEY");
+  const apiKey = Deno.env.get("VITE_FOOTBALL_API_KEY");
   if (!apiKey) {
-    throw new Error("VITE_API_FOOTBALL_API_KEY not configured");
+    throw new Error("VITE_FOOTBALL_API_KEY not configured");
   }
 
   const url = `${API_BASE_URL}${endpoint}`;
@@ -102,14 +126,13 @@ export async function fetchWithRetry(
   try {
     const response = await fetch(url, {
       headers: {
-        "x-apisports-key": apiKey,
+        "X-Auth-Token": apiKey,
         "Accept": "application/json",
       },
     });
 
     if (!response.ok) {
       if (response.status === 429 && retries < 3) {
-        _requestCount++;
         await new Promise((resolve) =>
           setTimeout(resolve, 1000 * (retries + 1))
         );
@@ -119,14 +142,6 @@ export async function fetchWithRetry(
     }
 
     const data = await response.json();
-
-    // API-Football returns errors inside the response body even on HTTP 200
-    if (data.errors && Object.keys(data.errors).length > 0) {
-      const errorMsg = Object.values(data.errors).join(", ");
-      throw new Error(`API-Football Error: ${errorMsg}`);
-    }
-
-    _requestCount++;
     return data;
   } catch (error) {
     if (retries < 3) {
@@ -140,103 +155,81 @@ export async function fetchWithRetry(
 // ── Normalization ────────────────────────────────────────────────────────────
 
 /**
- * Map API-Football short status codes to internal status.
+ * Map football-data.org status codes to internal status.
  */
 export function mapStatus(
-  shortCode: string,
+  apiStatus: string,
 ): "pending" | "live" | "finished" {
   const statusMap: Record<string, "pending" | "live" | "finished"> = {
-    "NS": "pending",
-    "TBD": "pending",
-    "PST": "pending",
-    "INT": "pending",
-    "SUSP": "live",
-    "1H": "live",
-    "HT": "live",
-    "2H": "live",
-    "ET": "live",
-    "BT": "live",
-    "P": "live",
+    "SCHEDULED": "pending",
+    "TIMED": "pending",
+    "IN_PLAY": "live",
+    "PAUSED": "live",
     "LIVE": "live",
-    "FT": "finished",
-    "AET": "finished",
-    "PEN": "finished",
-    "CANC": "finished",
-    "ABD": "finished",
-    "AWD": "finished",
-    "WO": "finished",
+    "FINISHED": "finished",
+    "POSTPONED": "pending",
+    "CANCELLED": "finished",
+    "SUSPENDED": "live",
   };
-  return statusMap[shortCode] || "pending";
+  return statusMap[apiStatus] || "pending";
 }
 
 /**
- * Detect if a round string indicates a knockout round.
+ * Detect if a round/stage indicates a knockout round.
  */
-export function isKnockoutRound(round: string | null): boolean {
-  if (!round) return false;
-  return /Round of 16|Quarter|Semi|Final/i.test(round);
+export function isKnockoutRound(stage: string | null): boolean {
+  if (!stage) return false;
+  return /Round of 16|Quarter|Semi|Final/i.test(stage.replace(/_/g, " "));
 }
 
 /**
- * Normalize an API-Football fixture to the agnostic ApiMatch interface.
+ * Normalize a football-data.org match to the agnostic ApiMatch interface.
  */
-export function normalizeMatch(fixture: any): ApiMatch {
-  const f = fixture.fixture || {};
-  const league = fixture.league || {};
-  const teams = fixture.teams || {};
-  const goals = fixture.goals || {};
-  const homeTeam = teams.home || {};
-  const awayTeam = teams.away || {};
-  const status = f.status || {};
+export function normalizeMatch(match: any): ApiMatch {
+  const homeTeam = match.homeTeam || {};
+  const awayTeam = match.awayTeam || {};
+  const score = match.score || {};
+  const competition = match.competition || {};
 
-  const leagueName = Object.keys(API_FOOTBALL_LEAGUE_IDS).find(
-    (key) => API_FOOTBALL_LEAGUE_IDS[key] === league.id,
-  ) || "Otros";
+  const externalId = competition.id;
+  const internalId = EXTERNAL_TO_INTERNAL[externalId];
+  const leagueName = internalId ? (LEAGUE_NAMES[internalId] || "Otros") : "Otros";
 
   return {
-    id: String(f.id),
-    date: new Date(f.date || f.timestamp * 1000).getTime(),
+    id: String(match.id),
+    date: new Date(match.utcDate).getTime(),
     league: leagueName,
-    leagueId: league.id,
+    leagueId: internalId || externalId,
     teams: {
       home: {
         name: homeTeam.name || "N/A",
-        badge: homeTeam.logo || "",
+        badge: homeTeam.crest || "",
         id: homeTeam.id,
       },
       away: {
         name: awayTeam.name || "N/A",
-        badge: awayTeam.logo || "",
+        badge: awayTeam.crest || "",
         id: awayTeam.id,
       },
     },
-    status: mapStatus(status.short),
+    status: mapStatus(match.status),
     score: {
-      home: goals.home ?? null,
-      away: goals.away ?? null,
+      home: score.fullTime?.home ?? (score.home ?? null),
+      away: score.fullTime?.away ?? (score.away ?? null),
     },
-    minute: status.elapsed || null,
-    round: league.round || null,
-    isKnockout: isKnockoutRound(league.round),
-    season: league.season || null,
+    minute: match.matchMinutes || null,
+    round: match.stage || null,
+    isKnockout: isKnockoutRound(match.stage),
+    season: match.season?.id ? Number(match.season.id) : null,
   };
 }
 
 /**
- * Get supported API-Football league IDs.
+ * Check if a match's competition is in our supported league set.
  */
-function getSupportedLeagueIds(): number[] {
-  return Object.values(API_FOOTBALL_LEAGUE_IDS);
-}
-
-/**
- * Format a Date as YYYY-MM-DD using UTC methods.
- */
-export function formatUtcDate(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function isSupportedMatch(match: any): boolean {
+  const externalId = match.competition?.id;
+  return externalId !== undefined && EXTERNAL_TO_INTERNAL[externalId] !== undefined;
 }
 
 /**
@@ -251,120 +244,111 @@ export function formatLocalDate(date: Date): string {
 
 /**
  * Normalize standings response to per-group structure.
+ *
+ * football-data.org returns standings in the format:
+ *   data.standings[].{ group: "GROUP_A", table: [{ position, team: {id,name,crest}, ... }] }
  */
 export function normalizeStandings(data: any): StandingsGroup[] {
-  const response = data?.response || [];
-  if (response.length === 0) return [];
+  const standings = data?.standings || [];
+  if (!Array.isArray(standings)) return [];
 
-  const leagueData = response[0];
-  if (!leagueData) return [];
+  return standings.map((groupStandings: any) => {
+    // Extract group letter from "GROUP_A" → "A", or use the group as-is
+    let group = groupStandings.group || "";
+    if (group.startsWith("GROUP_")) {
+      group = group.replace("GROUP_", "");
+    }
 
-  const rawStandings = leagueData.standings ||
-    leagueData.league?.standings ||
-    [];
-  const groups = Array.isArray(rawStandings) ? rawStandings : [];
-  const groupCount = Math.min(groups.length, 12);
+    const table = Array.isArray(groupStandings.table) ? groupStandings.table : [];
 
-  return groups.slice(0, groupCount).map(
-    (groupStandings: any, index: number) => {
-      const group = String.fromCharCode(65 + index); // 65 = 'A'
-      const teams = Array.isArray(groupStandings) ? groupStandings : [];
-
-      return {
-        group,
-        teams: teams.map((entry: any) => ({
-          rank: entry?.rank,
-          name: entry?.team?.name || entry?.name || "N/A",
-          logo: entry?.team?.logo || entry?.logo || "",
-          teamId: entry?.team?.id || entry?.id,
-          points: entry?.points ?? 0,
-          played: entry?.all?.played ?? 0,
-          wins: entry?.all?.win ?? 0,
-          draws: entry?.all?.draw ?? 0,
-          losses: entry?.all?.lose ?? 0,
-          goalsFor: entry?.all?.goals?.for ?? 0,
-          goalsAgainst: entry?.all?.goals?.against ?? 0,
-          goalDiff: (entry?.all?.goals?.for ?? 0) -
-            (entry?.all?.goals?.against ?? 0),
-        })),
-      };
-    },
-  );
+    return {
+      group,
+      teams: table.map((entry: any) => {
+        const team = entry.team || {};
+        return {
+          rank: entry.position ?? 0,
+          name: team.name || "N/A",
+          logo: team.crest || "",
+          teamId: team.id,
+          points: entry.points ?? 0,
+          played: entry.playedGames ?? 0,
+          wins: entry.won ?? 0,
+          draws: entry.draw ?? 0,
+          losses: entry.lost ?? 0,
+          goalsFor: entry.goalsFor ?? 0,
+          goalsAgainst: entry.goalsAgainst ?? 0,
+          goalDiff: entry.goalDifference ?? 0,
+        };
+      }),
+    };
+  });
 }
 
 // ── API Methods ──────────────────────────────────────────────────────────────
 
 /**
  * Get all matches for a specific LOCAL date.
- * Queries the 2 UTC dates that could contain matches for this local day,
- * then filters results by LOCAL date to handle any timezone offset.
+ *
+ * Queries football-data.org /matches endpoint with a date range,
+ * then filters by our supported leagues (internal league IDs).
  */
 export async function getMatches(date: string): Promise<ApiMatch[]> {
   const targetDate = new Date(date);
 
-  // Calculate the UTC date range that covers this local day
-  const localMidnight = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
+  // Fetch day before to day after to catch timezone edge cases
+  const prevDate = new Date(targetDate);
+  prevDate.setDate(prevDate.getDate() - 1);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  const dateFrom = formatLocalDate(prevDate);
+  const dateTo = formatLocalDate(nextDate);
+
+  const data = await fetchWithRetry(
+    `/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`,
   );
-  const nextMidnight = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate() + 1,
-  );
 
-  const utcDates = [...new Set([
-    formatUtcDate(localMidnight),
-    formatUtcDate(nextMidnight),
-  ])];
+  const allMatches = data.matches || [];
 
-  // Query both UTC dates in parallel
-  const [data1, data2] = await Promise.all([
-    fetchWithRetry(`/fixtures?date=${utcDates[0]}`),
-    utcDates[1]
-      ? fetchWithRetry(`/fixtures?date=${utcDates[1]}`)
-      : Promise.resolve({ response: [] }),
-  ]);
-
-  const allFixtures = [
-    ...(data1.response || []),
-    ...(data2.response || []),
-  ];
-  const supportedIds = getSupportedLeagueIds();
-
-  return allFixtures
-    .filter((f: any) => supportedIds.includes(f.league?.id))
-    .filter((f: any) => {
-      const matchDate = new Date(f.fixture?.date || f.timestamp * 1000);
+  return allMatches
+    .filter(isSupportedMatch)
+    .map(normalizeMatch)
+    .filter((match: ApiMatch) => {
+      const matchDate = new Date(match.date);
       return matchDate.getFullYear() === targetDate.getFullYear() &&
         matchDate.getMonth() === targetDate.getMonth() &&
         matchDate.getDate() === targetDate.getDate();
-    })
-    .map(normalizeMatch);
+    });
 }
 
 /**
  * Get all currently live matches.
  */
 export async function getLiveMatches(): Promise<ApiMatch[]> {
-  const data = await fetchWithRetry("/fixtures?live=all");
-  const supportedIds = getSupportedLeagueIds();
+  const data = await fetchWithRetry("/matches?status=LIVE");
 
-  return (data.response || [])
-    .filter((f: any) => supportedIds.includes(f.league?.id))
+  return (data.matches || [])
+    .filter(isSupportedMatch)
     .map(normalizeMatch);
 }
 
 /**
  * Get standings for a league and season.
+ *
+ * @param leagueId - Our internal league ID (e.g. 1 for World Cup)
+ * @param season - Season year (e.g. 2026)
  */
 export async function getStandings(
   leagueId: number,
   season: number,
 ): Promise<StandingsGroup[]> {
+  const externalId = INTERNAL_TO_EXTERNAL[leagueId];
+  if (!externalId) {
+    throw new Error(`No external ID mapping for internal league ID ${leagueId}`);
+  }
+
   const data = await fetchWithRetry(
-    `/standings?league=${leagueId}&season=${season}`,
+    `/competitions/${externalId}/standings`,
   );
   return normalizeStandings(data);
 }

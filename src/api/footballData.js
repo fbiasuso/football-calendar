@@ -1,9 +1,32 @@
-// Football-Data.org API Client
+// Football Data API Client — football-data.org v4
 // Documentation: https://www.football-data.org/documentation
 // Using Vite proxy to avoid CORS issues
 
-const API_KEY = import.meta.env.VITE_FOOTBALL_DATA_API_KEY;
+const API_KEY = import.meta.env.VITE_FOOTBALL_API_KEY;
 const PROXY_URL = '/api/football-data';
+
+// Map of internal league IDs → football-data.org v4 competition IDs
+// Used when calling football-data.org endpoints directly (non-Supabase mode)
+const INTERNAL_TO_EXTERNAL_ID = {
+  1: 2000,  // World Cup
+  2: 2001,  // UEFA Champions League
+  3: 2021,  // Premier League
+  4: 2014,  // LaLiga
+  5: 2002,  // Bundesliga
+  6: 2019,  // Serie A
+  7: 2055,  // FA Cup
+  8: 2079,  // Copa del Rey
+  9: 2011,  // DFB-Pokal
+  10: 2122, // Coppa Italia
+  11: 2139, // EFL Cup
+  12: 2152, // Copa Libertadores
+  13: 2024, // Argentine Liga Profesional
+};
+
+// Invert for external→internal lookup
+const EXTERNAL_TO_INTERNAL_ID = Object.fromEntries(
+  Object.entries(INTERNAL_TO_EXTERNAL_ID).map(([k, v]) => [v, Number(k)])
+);
 
 async function fetchWithRetry(endpoint, retries = 0) {
   const url = `${PROXY_URL}${endpoint}`;
@@ -67,7 +90,7 @@ export async function getMatches(date) {
 
 // Get live matches
 export async function getLiveMatches() {
-  const data = await fetchWithRetry('/matches?status=LIVE_IN_PLAY');
+  const data = await fetchWithRetry('/matches?status=LIVE');
   return (data.matches || []).map(normalizeMatch);
 }
 
@@ -183,18 +206,59 @@ function mapStatus(apiStatus) {
   return statusMap[apiStatus] || 'pending';
 }
 
+// Get standings for a league and season (non-Supabase mode)
+export async function getStandings(leagueId, season) {
+  const externalId = INTERNAL_TO_EXTERNAL_ID[leagueId];
+  if (!externalId) throw new Error(`No football-data.org mapping for internal league ID ${leagueId}`);
+
+  const data = await fetchWithRetry(`/competitions/${externalId}/standings`);
+  const standings = data.standings || [];
+
+  return standings
+    .filter(s => s.type === 'TOTAL')
+    .map(s => ({
+      group: (s.group || '').replace('GROUP_', ''),
+      teams: (s.table || []).map(entry => ({
+        rank: entry.position,
+        name: entry.team?.name || 'N/A',
+        logo: entry.team?.crest || '',
+        teamId: entry.team?.id,
+        points: entry.points ?? 0,
+        played: entry.playedGames ?? 0,
+        wins: entry.won ?? 0,
+        draws: entry.draw ?? 0,
+        losses: entry.lost ?? 0,
+        goalsFor: entry.goalsFor ?? 0,
+        goalsAgainst: entry.goalsAgainst ?? 0,
+        goalDiff: entry.goalDifference ?? 0,
+      })),
+    }));
+}
+
+// Get fixture rounds for a league and season (non-Supabase mode)
+export async function getRounds(leagueId, season) {
+  const externalId = INTERNAL_TO_EXTERNAL_ID[leagueId];
+  if (!externalId) return [];
+
+  const data = await fetchWithRetry(`/competitions/${externalId}/matches?season=${season}&limit=1`);
+  // football-data.org doesn't have a dedicated rounds endpoint,
+  // but matchday info is embedded in each match. Return empty for now.
+  return [];
+}
+
 // Normalize match data from API to our format
 function normalizeMatch(match) {
   const homeTeam = match.homeTeam || {};
   const awayTeam = match.awayTeam || {};
   const score = match.score?.fullTime || {};
-  
+  const externalLeagueId = match.competition?.id;
+
   return {
     id: String(match.id),
     title: `${homeTeam.name} vs ${awayTeam.name}`,
     date: new Date(match.utcDate).getTime(),
     league: match.competition?.name || 'Otros',
-    leagueId: match.competition?.id,
+    leagueId: EXTERNAL_TO_INTERNAL_ID[externalLeagueId] || externalLeagueId,
     competitionCode: match.competition?.code || null,
     stage: match.stage || null, // ROUND_OF_16, QUARTER_FINALS, etc.
     matchday: match.matchday || null,
@@ -226,4 +290,6 @@ export const footballDataClient = {
   getCompetitions,
   getMatchById,
   findFirstLegMatch,
+  getStandings,
+  getRounds,
 };

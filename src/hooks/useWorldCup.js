@@ -3,9 +3,10 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import useAppStore from '../store/useAppStore.js';
 // Usar el adapter (static-first con fallback a API real)
 import { getStandings, getRounds } from '../api/adapter.js';
+import { INTERNAL_LEAGUE_IDS } from '../utils/leagueConfig.js';
 
 const STALE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-const LEAGUE_ID = 1; // API-Football World Cup league ID
+const LEAGUE_ID = INTERNAL_LEAGUE_IDS['World Cup 2026']; // Internal World Cup league ID (1)
 const SEASON = 2026;
 
 /**

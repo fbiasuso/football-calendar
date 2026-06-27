@@ -147,7 +147,7 @@ export async function getLiveMatches() {
  * Queries the standings table with a JOIN to teams, groups by group_name,
  * and returns the same shape as apiFootball.js normalizeStandings().
  *
- * @param {number} leagueId - League ID (matches leagues.api_id)
+ * @param {number} leagueId - Internal league ID (1-13)
  * @param {number} season - Season year (e.g. 2026)
  * @returns {Promise<Array<{group: string, teams: Array}>>}
  */
@@ -156,10 +156,9 @@ export async function getStandings(leagueId, season) {
     .from('standings')
     .select(`
       *,
-      team:team_id (id, name, logo, api_id),
-      league:league_id!inner (api_id)
+      team:team_id (id, name, logo, api_id)
     `)
-    .eq('league.api_id', leagueId)
+    .eq('league_id', leagueId)
     .eq('season', season)
     .order('group_name')
     .order('rank');

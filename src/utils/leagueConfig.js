@@ -1,21 +1,41 @@
 // League configuration for Football Calendar
 
-// API-Football league IDs for each league name
-export const API_FOOTBALL_LEAGUE_IDS = {
+// Internal league IDs (mapped to provider-specific IDs via the adapter/edge function)
+// Named INTERNAL_LEAGUE_IDS per spec; LEAGUE_IDS exported as alias for backward compat
+export const INTERNAL_LEAGUE_IDS = {
   'World Cup 2026': 1,
   'UEFA Champions League': 2,
-  'Copa Libertadores': 13,
-  'Copa Sudamericana': 11,
-  'Premier League': 39,
-  'FA Cup': 45,
-  'EFL Cup': 48,
-  'LaLiga': 140,
-  'Copa del Rey': 143,
-  'Supercopa': 556,
-  'Serie A': 135,
-  'Coppa Italia': 137,
-  'Bundesliga': 78,
-  'DFB-Pokal': 81,
+  'Premier League': 3,
+  'LaLiga': 4,
+  'Bundesliga': 5,
+  'Serie A': 6,
+  'FA Cup': 7,
+  'Copa del Rey': 8,
+  'DFB-Pokal': 9,
+  'Coppa Italia': 10,
+  'EFL Cup': 11,
+  'Copa Libertadores': 12,
+  'Argentine Liga Profesional': 13,
+};
+
+// Alias for backward compatibility
+export const LEAGUE_IDS = INTERNAL_LEAGUE_IDS;
+
+// football-data.org v4 competition IDs (external — used by the API)
+export const FOOTBALL_DATA_COMPETITION_IDS = {
+  'World Cup 2026': 2000,
+  'UEFA Champions League': 2001,
+  'Premier League': 2021,
+  'LaLiga': 2014,
+  'Bundesliga': 2002,
+  'Serie A': 2019,
+  'FA Cup': 2055,
+  'Copa del Rey': 2079,
+  'DFB-Pokal': 2011,
+  'Coppa Italia': 2122,
+  'EFL Cup': 2139,
+  'Copa Libertadores': 2152,
+  'Argentine Liga Profesional': 2024,
 };
 
 export const LEAGUE_GROUPS = {
@@ -29,7 +49,7 @@ export const LEAGUE_GROUPS = {
   },
   libertadores: {
     name: 'Copa Libertadores',
-    leagues: ['Copa Libertadores', 'Copa Sudamericana'],
+    leagues: ['Copa Libertadores'],
   },
   argentina: {
     name: 'Argentina',
@@ -41,7 +61,7 @@ export const LEAGUE_GROUPS = {
   },
   espana: {
     name: 'España',
-    leagues: ['LaLiga', 'Copa del Rey', 'Supercopa'],
+    leagues: ['LaLiga', 'Copa del Rey'],
   },
   italia: {
     name: 'Italia',

@@ -1,15 +1,15 @@
 // scripts/seed-supabase.js
 // One-time seed script for Supabase database.
-// Upserts leagues from leagueConfig.js, fetches teams from API-Football,
+// Upserts leagues from leagueConfig.js, fetches teams from football-data.org,
 // populates team_rosters and bracket_nodes.
 //
 // Usage:
 //   SUPABASE_URL=https://<ref>.supabase.co \
 //   SUPABASE_SERVICE_ROLE_KEY=<key> \
-//   VITE_API_FOOTBALL_API_KEY=<key> \
+//   VITE_FOOTBALL_API_KEY=<key> \
 //   node scripts/seed-supabase.js
 //
-// If VITE_API_FOOTBALL_API_KEY is not set, teams/rosters are skipped
+// If VITE_FOOTBALL_API_KEY is not set, teams/rosters are skipped
 // (can be populated later by the Edge Function as matches arrive).
 
 import { createClient } from '@supabase/supabase-js';
@@ -18,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const API_FOOTBALL_KEY = process.env.VITE_API_FOOTBALL_API_KEY || '';
+const API_FOOTBALL_KEY = process.env.VITE_FOOTBALL_API_KEY || '';
 
 const API_BASE_URL = 'https://v3.football.api-sports.io';
 const SEASON = 2026;
@@ -63,7 +63,7 @@ async function fetchWithRetry(endpoint, retries = 0) {
 
 /**
  * Build league records from leagueConfig.js data.
- * @param {Object} apiIds - API_FOOTBALL_LEAGUE_IDS mapping { name: api_id }
+ * @param {Object} apiIds - FOOTBALL_DATA_COMPETITION_IDS mapping { name: api_id }
  * @param {Object} groups - LEAGUE_GROUPS mapping { groupKey: { name, leagues[] } }
  * @param {string[]} defaultSelected - DEFAULT_SELECTED_LEAGUES array
  * @returns {Array<{api_id: number, name: string, season: number, group_name: string, display_order: number, default_sel: boolean}>}
@@ -312,8 +312,8 @@ async function main() {
     process.exit(1);
   }
 
-  const { API_FOOTBALL_LEAGUE_IDS, LEAGUE_GROUPS, DEFAULT_SELECTED_LEAGUES } = leagueConfig;
-  const leagues = buildLeagues(API_FOOTBALL_LEAGUE_IDS, LEAGUE_GROUPS, DEFAULT_SELECTED_LEAGUES);
+  const { FOOTBALL_DATA_COMPETITION_IDS, LEAGUE_GROUPS, DEFAULT_SELECTED_LEAGUES } = leagueConfig;
+  const leagues = buildLeagues(FOOTBALL_DATA_COMPETITION_IDS, LEAGUE_GROUPS, DEFAULT_SELECTED_LEAGUES);
   console.log(`   Found ${leagues.length} leagues to seed.\n`);
 
   // Step 2: Upsert leagues and build api_id → internal id mapping
@@ -392,7 +392,7 @@ async function main() {
 
     console.log();
   } else {
-    console.log('👤 VITE_API_FOOTBALL_API_KEY not set — skipping team fetch.');
+    console.log('👤 VITE_FOOTBALL_API_KEY not set — skipping team fetch.');
     console.log('   Teams and team_rosters can be populated later by the Edge Function.\n');
   }
 

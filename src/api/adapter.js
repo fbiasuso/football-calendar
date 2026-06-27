@@ -1,10 +1,11 @@
 // API Adapter Interface for Football Calendar
-// Using API-Football (api-sports.io v3)
+// Routes to the configured provider (football-data.org by default) via provider.js
 // Soporta modo estático (lee de /data/*.json) con fallback a API real
 // Auto-detección: al primer llamado, intenta fetch('/data/meta.json')
 // Si existe → modo estático para toda la sesión
 // Si no → fallback a API real (dev, o gh-pages no deployado)
 
+import { getClient } from './provider.js';
 import { getDateKey, addDays } from '../utils/dateUtils.js';
 
 // Vite BASE_URL = '/football-calendar/' en prod (gh-pages), '/' en dev local
@@ -60,7 +61,7 @@ async function ensureModeDetected() {
  * @property {string} title
  * @property {number} date          - Unix timestamp ms
  * @property {string} league        - Display name (e.g. "Premier League")
- * @property {number} leagueId      - API-Football league ID
+ * @property {number} leagueId      - Internal league ID (1-13)
  * @property {Object} teams
  * @property {Object} teams.home
  * @property {string} teams.home.name
@@ -109,8 +110,8 @@ export async function getMatches(date) {
     const allMatches = [...(data1 || []), ...(data2 || [])];
     if (allMatches.length === 0) {
       // Fall through to API fallback if no static data at all
-      const { apiFootballClient } = await import('./apiFootball.js');
-      return apiFootballClient.getMatches(date);
+      const client = await getClient();
+      return client.getMatches(date);
     }
 
     // Filter by LOCAL date (matches what apiFootball does)
@@ -122,8 +123,8 @@ export async function getMatches(date) {
     });
   }
 
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.getMatches(date);
+      const client = await getClient();
+      return client.getMatches(date);
 }
 
 /**
@@ -143,8 +144,8 @@ export async function getLiveMatches() {
     if (data) return data;
   }
 
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.getLiveMatches();
+  const client = await getClient();
+  return client.getLiveMatches();
 }
 
 /**
@@ -152,8 +153,8 @@ export async function getLiveMatches() {
  * @returns {Promise<Array<{id: string, name: string}>>}
  */
 export async function getLeagues() {
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.getCompetitions();
+  const client = await getClient();
+  return client.getCompetitions();
 }
 
 /**
@@ -162,8 +163,8 @@ export async function getLeagues() {
  * @returns {Promise<Match>}
  */
 export async function getMatchById(matchId) {
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.getMatchById(matchId);
+  const client = await getClient();
+  return client.getMatchById(matchId);
 }
 
 /**
@@ -172,13 +173,13 @@ export async function getMatchById(matchId) {
  * @returns {Promise<{home: number, away: number}|null>}
  */
 export async function findFirstLegMatch(match) {
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.findFirstLegMatch(match);
+  const client = await getClient();
+  return client.findFirstLegMatch(match);
 }
 
 /**
  * Get standings for a league and season
- * @param {number} leagueId - API-Football league ID
+ * @param {number} leagueId - Internal league ID (1-13)
  * @param {number} season - Season year
  * @returns {Promise<Array<{group: string, teams: Array}>>}
  */
@@ -195,8 +196,8 @@ export async function getStandings(leagueId, season) {
     if (data) return data;
   }
 
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.getStandings(leagueId, season);
+  const client = await getClient();
+  return client.getStandings(leagueId, season);
 }
 
 /**
@@ -249,7 +250,7 @@ export async function toggleFastMode(enabled) {
 
 /**
  * Get fixture rounds for a league and season
- * @param {number} leagueId - API-Football league ID
+ * @param {number} leagueId - Internal league ID (1-13)
  * @param {number} season - Season year
  * @returns {Promise<string[]>}
  */
@@ -265,6 +266,6 @@ export async function getRounds(leagueId, season) {
     }
   }
 
-  const { apiFootballClient } = await import('./apiFootball.js');
-  return apiFootballClient.getRounds(leagueId, season);
+  const client = await getClient();
+  return client.getRounds(leagueId, season);
 }

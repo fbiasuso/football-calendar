@@ -73,32 +73,32 @@ function createMockSupabaseClient(overrides: Record<string, any> = {}) {
 
 // ── mapStatus ────────────────────────────────────────────────────────────────
 
-Deno.test("mapStatus — maps NS to pending", () => {
-  assertEquals(mapStatus("NS"), "pending");
+Deno.test("mapStatus — maps SCHEDULED to pending", () => {
+  assertEquals(mapStatus("SCHEDULED"), "pending");
 });
 
-Deno.test("mapStatus — maps TBD to pending", () => {
-  assertEquals(mapStatus("TBD"), "pending");
+Deno.test("mapStatus — maps TIMED to pending", () => {
+  assertEquals(mapStatus("TIMED"), "pending");
 });
 
-Deno.test("mapStatus — maps 1H to live", () => {
-  assertEquals(mapStatus("1H"), "live");
+Deno.test("mapStatus — maps IN_PLAY to live", () => {
+  assertEquals(mapStatus("IN_PLAY"), "live");
 });
 
-Deno.test("mapStatus — maps HT to live", () => {
-  assertEquals(mapStatus("HT"), "live");
+Deno.test("mapStatus — maps PAUSED to live", () => {
+  assertEquals(mapStatus("PAUSED"), "live");
 });
 
-Deno.test("mapStatus — maps 2H to live", () => {
-  assertEquals(mapStatus("2H"), "live");
+Deno.test("mapStatus — maps LIVE to live", () => {
+  assertEquals(mapStatus("LIVE"), "live");
 });
 
-Deno.test("mapStatus — maps FT to finished", () => {
-  assertEquals(mapStatus("FT"), "finished");
+Deno.test("mapStatus — maps FINISHED to finished", () => {
+  assertEquals(mapStatus("FINISHED"), "finished");
 });
 
-Deno.test("mapStatus — maps PEN to finished", () => {
-  assertEquals(mapStatus("PEN"), "finished");
+Deno.test("mapStatus — maps CANCELLED to finished", () => {
+  assertEquals(mapStatus("CANCELLED"), "finished");
 });
 
 Deno.test("mapStatus — maps unknown to pending", () => {
@@ -107,24 +107,24 @@ Deno.test("mapStatus — maps unknown to pending", () => {
 
 // ── isKnockoutRound ──────────────────────────────────────────────────────────
 
-Deno.test("isKnockoutRound — detects Round of 16", () => {
-  assertEquals(isKnockoutRound("Round of 16"), true);
+Deno.test("isKnockoutRound — detects ROUND_OF_16", () => {
+  assertEquals(isKnockoutRound("ROUND_OF_16"), true);
 });
 
-Deno.test("isKnockoutRound — detects Quarter-finals", () => {
-  assertEquals(isKnockoutRound("Quarter-finals"), true);
+Deno.test("isKnockoutRound — detects QUARTER_FINALS", () => {
+  assertEquals(isKnockoutRound("QUARTER_FINALS"), true);
 });
 
-Deno.test("isKnockoutRound — detects Semi-finals", () => {
-  assertEquals(isKnockoutRound("Semi-finals"), true);
+Deno.test("isKnockoutRound — detects SEMI_FINALS", () => {
+  assertEquals(isKnockoutRound("SEMI_FINALS"), true);
 });
 
-Deno.test("isKnockoutRound — detects Final", () => {
-  assertEquals(isKnockoutRound("Final"), true);
+Deno.test("isKnockoutRound — detects FINAL", () => {
+  assertEquals(isKnockoutRound("FINAL"), true);
 });
 
-Deno.test("isKnockoutRound — returns false for Group Stage", () => {
-  assertEquals(isKnockoutRound("Group Stage"), false);
+Deno.test("isKnockoutRound — returns false for REGULAR_SEASON", () => {
+  assertEquals(isKnockoutRound("REGULAR_SEASON"), false);
 });
 
 Deno.test("isKnockoutRound — returns false for null", () => {
@@ -134,29 +134,23 @@ Deno.test("isKnockoutRound — returns false for null", () => {
 // ── normalizeMatch ───────────────────────────────────────────────────────────
 
 const sampleFixture = {
-  fixture: {
-    id: 123456,
-    date: "2026-06-23T20:00:00+00:00",
-    status: { short: "NS", elapsed: null },
-  },
-  league: {
-    id: 39,
-    name: "Premier League",
-    round: "Regular Season - 1",
-    season: 2026,
-  },
-  teams: {
-    home: { id: 33, name: "Manchester United", logo: "https://example.com/manu.png" },
-    away: { id: 34, name: "Newcastle", logo: "https://example.com/newc.png" },
-  },
-  goals: { home: null, away: null },
+  id: 123456,
+  utcDate: "2026-06-23T20:00:00Z",
+  status: "SCHEDULED",
+  matchday: 1,
+  stage: "REGULAR_SEASON",
+  season: { id: 2026 },
+  competition: { id: 2021, name: "Premier League" },
+  homeTeam: { id: 33, name: "Manchester United", crest: "https://example.com/manu.png" },
+  awayTeam: { id: 34, name: "Newcastle", crest: "https://example.com/newc.png" },
+  score: { fullTime: { home: null, away: null }, halfTime: { home: null, away: null } },
 };
 
 Deno.test("normalizeMatch — returns correct shape", () => {
   const result = normalizeMatch(sampleFixture);
   assertEquals(result.id, "123456");
   assertEquals(result.league, "Premier League");
-  assertEquals(result.leagueId, 39);
+  assertEquals(result.leagueId, 3);
   assertEquals(result.status, "pending");
   assertEquals(result.teams.home.name, "Manchester United");
   assertEquals(result.teams.away.name, "Newcastle");
@@ -169,7 +163,7 @@ Deno.test("normalizeMatch — returns correct shape", () => {
 Deno.test("normalizeMatch — maps league name correctly", () => {
   const wcFixture = {
     ...sampleFixture,
-    league: { ...sampleFixture.league, id: 1 },
+    competition: { ...sampleFixture.competition, id: 2000 },
   };
   const result = normalizeMatch(wcFixture);
   assertEquals(result.league, "World Cup 2026");
@@ -177,17 +171,16 @@ Deno.test("normalizeMatch — maps league name correctly", () => {
 
 Deno.test("normalizeMatch — handles live match with scores", () => {
   const liveFixture = {
-    fixture: {
-      id: 654321,
-      date: "2026-06-23T21:00:00+00:00",
-      status: { short: "2H", elapsed: 65 },
-    },
-    league: { id: 39, round: null, season: 2026 },
-    teams: {
-      home: { id: 33, name: "Chelsea", logo: "" },
-      away: { id: 34, name: "Arsenal", logo: "" },
-    },
-    goals: { home: 2, away: 1 },
+    id: 654321,
+    utcDate: "2026-06-23T21:00:00Z",
+    status: "LIVE",
+    matchMinutes: 65,
+    stage: null,
+    season: { id: 2026 },
+    competition: { id: 2021 },
+    homeTeam: { id: 33, name: "Chelsea", crest: "" },
+    awayTeam: { id: 34, name: "Arsenal", crest: "" },
+    score: { fullTime: { home: 2, away: 1 }, halfTime: { home: null, away: null } },
   };
   const result = normalizeMatch(liveFixture);
   assertEquals(result.status, "live");
@@ -199,34 +192,23 @@ Deno.test("normalizeMatch — handles live match with scores", () => {
 // ── normalizeStandings ───────────────────────────────────────────────────────
 
 const sampleStandingsResponse = {
-  response: [{
-    standings: [
-      // Group A
-      [
-        {
-          rank: 1,
-          team: { id: 1, name: "Team A", logo: "" },
-          points: 6,
-          all: { played: 2, win: 2, draw: 0, lose: 0, goals: { for: 5, against: 1 } },
-        },
-        {
-          rank: 2,
-          team: { id: 2, name: "Team B", logo: "" },
-          points: 3,
-          all: { played: 2, win: 1, draw: 0, lose: 1, goals: { for: 3, against: 3 } },
-        },
+  standings: [
+    {
+      type: "TOTAL",
+      group: "GROUP_A",
+      table: [
+        { position: 1, team: { id: 1, name: "Team A", crest: "" }, playedGames: 2, won: 2, draw: 0, lost: 0, points: 6, goalsFor: 5, goalsAgainst: 1, goalDifference: 4 },
+        { position: 2, team: { id: 2, name: "Team B", crest: "" }, playedGames: 2, won: 1, draw: 0, lost: 1, points: 3, goalsFor: 3, goalsAgainst: 3, goalDifference: 0 },
       ],
-      // Group B
-      [
-        {
-          rank: 1,
-          team: { id: 3, name: "Team C", logo: "" },
-          points: 4,
-          all: { played: 2, win: 1, draw: 1, lose: 0, goals: { for: 2, against: 1 } },
-        },
+    },
+    {
+      type: "TOTAL",
+      group: "GROUP_B",
+      table: [
+        { position: 1, team: { id: 3, name: "Team C", crest: "" }, playedGames: 2, won: 1, draw: 1, lost: 0, points: 4, goalsFor: 2, goalsAgainst: 1, goalDifference: 1 },
       ],
-    ],
-  }],
+    },
+  ],
 };
 
 Deno.test("normalizeStandings — returns groups with correct shape", () => {
@@ -242,8 +224,8 @@ Deno.test("normalizeStandings — computes goalDiff correctly", () => {
   assertEquals(result[0].teams[1].goalDiff, 0); // 3 - 3
 });
 
-Deno.test("normalizeStandings — returns empty array for empty response", () => {
-  assertEquals(normalizeStandings({ response: [] }), []);
+Deno.test("normalizeStandings — returns empty array for empty standings", () => {
+  assertEquals(normalizeStandings({ standings: [] }), []);
 });
 
 Deno.test("normalizeStandings — returns empty array for null data", () => {
@@ -322,33 +304,31 @@ Deno.test("updatePipelineMeta — throws on error", async () => {
 // ── api.ts — getMatches with mocked fetch ────────────────────────────────────
 
 Deno.test("getMatches — calls API and returns normalized matches", async () => {
-  const envKey = "VITE_API_FOOTBALL_API_KEY";
+  const envKey = "VITE_FOOTBALL_API_KEY";
   const originalEnv = Deno.env.get(envKey);
   // We can't easily set env in tests without --allow-env, so we skip if not set
   if (!originalEnv) {
-    console.warn("Skipping: VITE_API_FOOTBALL_API_KEY not set in environment");
+    console.warn("Skipping: VITE_FOOTBALL_API_KEY not set in environment");
     return;
   }
 
   const apiResponse = {
-    response: [{
-      fixture: {
-        id: 1,
-        date: "2026-06-23T20:00:00+00:00",
-        status: { short: "NS", elapsed: null },
-      },
-      league: { id: 39, round: null, season: 2026 },
-      teams: {
-        home: { id: 33, name: "Team H", logo: "" },
-        away: { id: 34, name: "Team A", logo: "" },
-      },
-      goals: { home: null, away: null },
+    matches: [{
+      id: 1,
+      utcDate: "2026-06-23T20:00:00Z",
+      status: "SCHEDULED",
+      stage: null,
+      season: { id: 2026 },
+      competition: { id: 2021, name: "Premier League" },
+      homeTeam: { id: 33, name: "Team H", crest: "" },
+      awayTeam: { id: 34, name: "Team A", crest: "" },
+      score: { fullTime: { home: null, away: null }, halfTime: { home: null, away: null } },
     }],
   };
 
   mockFetch((url: string) => {
-    assert(url.includes("/fixtures?date="));
-    assert(url.includes("api-sports.io"));
+    assert(url.includes("/matches?dateFrom="));
+    assert(url.includes("football-data.org"));
     return Promise.resolve(jsonResponse(apiResponse));
   });
 
@@ -357,21 +337,21 @@ Deno.test("getMatches — calls API and returns normalized matches", async () =>
     const { getMatches } = await import("../api.ts");
     const result = await getMatches("2026-06-23");
     assert(Array.isArray(result));
-    // Filtering: League 39 is supported
+    // Filtering: League 2021 (Premier League) is supported
     assertEquals(result.length, 1);
     assertEquals(result[0].id, "1");
-    assertEquals(result[0].leagueId, 39);
+    assertEquals(result[0].leagueId, 3);
   } finally {
     restoreFetch();
   }
 });
 
 Deno.test("getMatches — returns empty array for no matching fixtures", async () => {
-  const envKey = "VITE_API_FOOTBALL_API_KEY";
+  const envKey = "VITE_FOOTBALL_API_KEY";
   if (!Deno.env.get(envKey)) return;
 
   mockFetch(() => {
-    return Promise.resolve(jsonResponse({ response: [] }));
+    return Promise.resolve(jsonResponse({ matches: [] }));
   });
 
   try {
@@ -386,27 +366,26 @@ Deno.test("getMatches — returns empty array for no matching fixtures", async (
 // ── api.ts — getLiveMatches with mocked fetch ────────────────────────────────
 
 Deno.test("getLiveMatches — returns normalized live matches", async () => {
-  const envKey = "VITE_API_FOOTBALL_API_KEY";
+  const envKey = "VITE_FOOTBALL_API_KEY";
   if (!Deno.env.get(envKey)) return;
 
   const apiResponse = {
-    response: [{
-      fixture: {
-        id: 999,
-        date: "2026-06-23T21:00:00+00:00",
-        status: { short: "2H", elapsed: 70 },
-      },
-      league: { id: 39, round: null, season: 2026 },
-      teams: {
-        home: { id: 33, name: "Live H", logo: "" },
-        away: { id: 34, name: "Live A", logo: "" },
-      },
-      goals: { home: 2, away: 2 },
+    matches: [{
+      id: 999,
+      utcDate: "2026-06-23T21:00:00Z",
+      status: "LIVE",
+      matchMinutes: 70,
+      stage: null,
+      season: { id: 2026 },
+      competition: { id: 2021 },
+      homeTeam: { id: 33, name: "Live H", crest: "" },
+      awayTeam: { id: 34, name: "Live A", crest: "" },
+      score: { fullTime: { home: 2, away: 2 }, halfTime: { home: null, away: null } },
     }],
   };
 
   mockFetch((url: string) => {
-    assert(url.includes("/fixtures?live=all"));
+    assert(url.includes("/matches?status=LIVE"));
     return Promise.resolve(jsonResponse(apiResponse));
   });
 
@@ -425,11 +404,11 @@ Deno.test("getLiveMatches — returns normalized live matches", async () => {
 // ── api.ts — getStandings with mocked fetch ──────────────────────────────────
 
 Deno.test("getStandings — returns normalized standings groups", async () => {
-  const envKey = "VITE_API_FOOTBALL_API_KEY";
+  const envKey = "VITE_FOOTBALL_API_KEY";
   if (!Deno.env.get(envKey)) return;
 
   mockFetch((url: string) => {
-    assert(url.includes("/standings?league=1&season=2026"));
+    assert(url.includes("/competitions/2000/standings"));
     return Promise.resolve(jsonResponse(sampleStandingsResponse));
   });
 
@@ -448,7 +427,7 @@ Deno.test("getStandings — returns normalized standings groups", async () => {
 // ── api.ts — fetchWithRetry retry on 429 ─────────────────────────────────────
 
 Deno.test("fetchWithRetry — retries on 429 and succeeds", async () => {
-  const envKey = "VITE_API_FOOTBALL_API_KEY";
+  const envKey = "VITE_FOOTBALL_API_KEY";
   if (!Deno.env.get(envKey)) return;
 
   let callCount = 0;
@@ -472,7 +451,7 @@ Deno.test("fetchWithRetry — retries on 429 and succeeds", async () => {
 });
 
 Deno.test("fetchWithRetry — throws after exhausting retries on 429", async () => {
-  const envKey = "VITE_API_FOOTBALL_API_KEY";
+  const envKey = "VITE_FOOTBALL_API_KEY";
   if (!Deno.env.get(envKey)) return;
 
   let callCount = 0;
@@ -505,7 +484,7 @@ Deno.test("upsertMatches — upserts match data with FK mapping", async () => {
         return {
           select: () =>
             Promise.resolve({
-              data: [{ id: 2, api_id: 39 }],
+              data: [{ id: 3, api_id: 2021 }],
               error: null,
             }),
         };
@@ -538,7 +517,7 @@ Deno.test("upsertMatches — upserts match data with FK mapping", async () => {
 
   const testMatches = [{
     id: "123",
-    leagueId: 39,
+    leagueId: 3,
     date: new Date("2026-06-23T20:00:00Z").getTime(),
     teams: {
       home: { id: 33, name: "Home", badge: "", },
@@ -556,9 +535,9 @@ Deno.test("upsertMatches — upserts match data with FK mapping", async () => {
   assertEquals(count, 1);
   assertEquals(upsertedRows.length, 1);
   assertEquals(upsertedRows[0].id, "123");
-  assertEquals(upsertedRows[0].league_id, 2); // mapped from api_id 39
-  assertEquals(upsertedRows[0].home_team_id, 10); // mapped from api_id 33
-  assertEquals(upsertedRows[0].away_team_id, 20); // mapped from api_id 34
+  assertEquals(upsertedRows[0].league_id, 3);
+  assertEquals(upsertedRows[0].home_team_id, 10);
+  assertEquals(upsertedRows[0].away_team_id, 20);
   assertEquals(upsertedRows[0].status, "scheduled"); // pending → scheduled
 });
 

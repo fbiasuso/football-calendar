@@ -301,7 +301,7 @@ describe('supabaseAdapter', () => {
       const result = await supabaseAdapter.getStandings(1, 2026);
 
       expect(mockFrom).toHaveBeenCalledWith('standings');
-      expect(chain.eq).toHaveBeenCalledWith('league.api_id', 1);
+      expect(chain.eq).toHaveBeenCalledWith('league_id', 1);
       expect(chain.eq).toHaveBeenCalledWith('season', 2026);
 
       expect(result).toHaveLength(1);

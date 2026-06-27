@@ -4,15 +4,15 @@
 //
 // Secrets (available by default in Supabase Edge Function runtime):
 //   SUPABASE_DB_URL               — Direct Postgres connection string
-//   VITE_API_FOOTBALL_API_KEY     — API-Football API key (set via supabase secrets set)
+//   VITE_FOOTBALL_API_KEY         — football-data.org API key (set via supabase secrets set)
 
 import pg from "npm:pg@8.13.0";
 const { Pool } = pg;
 const POOL = new Pool({ connectionString: Deno.env.get("SUPABASE_DB_URL"), max: 1 });
 
 import { getSchedule, isWorldCupPeriod, type ScheduleDecision } from "./schedule.ts";
-import { getMatches, getLiveMatches, getRequestCount, resetRequestCount } from "./api.ts";
-import { upsertMatches, upsertStandings, updatePipelineMeta, readBudget } from "./db.ts";
+import { getMatches, getLiveMatches } from "./api.ts";
+import { upsertMatches, upsertStandings, updatePipelineMeta } from "./db.ts";
 import { computeStandings } from "./standings.ts";
 
 export interface FetchDataResponse {
@@ -63,11 +63,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // ── Check API key ─────────────────────────────────────────────────────
-    const apiFootballKey = Deno.env.get("VITE_API_FOOTBALL_API_KEY");
+    const footballApiKey = Deno.env.get("VITE_FOOTBALL_API_KEY");
 
-    if (!apiFootballKey) {
+    if (!footballApiKey) {
       return new Response(
-        JSON.stringify({ error: "Missing secret: VITE_API_FOOTBALL_API_KEY" }),
+        JSON.stringify({ error: "Missing secret: VITE_FOOTBALL_API_KEY" }),
         { status: 500, headers },
       );
     }
@@ -83,56 +83,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const pipelineMeta = pipelineRows[0];
-
-    // ── Budget check ────────────────────────────────────────────────────────
-    const budget = await readBudget(POOL);
-
-    // UTC day reset logic
-    const today = new Date();
-    const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    const resetDate = budget.api_reset_date ? new Date(budget.api_reset_date) : null;
-
-    if (!resetDate || todayUTC > resetDate) {
-      await updatePipelineMeta(null, {
-        api_requests_today: 0,
-        api_reset_date: todayUTC.toISOString(),
-      });
-      budget.api_requests_today = 0;
-    }
-
-    // Budget check — skip API calls if exhausted but still compute standings
-    if (budget.api_requests_today >= budget.api_budget) {
-      console.log("[fetch-data] Budget exhausted, computing standings from cache");
-      let standingsUpserted = false;
-      try {
-        const standings = await computeStandings(POOL);
-        if (standings.length > 0) {
-          const count = await upsertStandings(null, 1, 2026, standings, true);
-          standingsUpserted = count > 0;
-        }
-      } catch (e: any) {
-        console.warn("[fetch-data] Standings computation error:", e.message);
-      }
-      return new Response(
-        JSON.stringify({
-          fetched: false,
-          reason: "API budget exhausted for today",
-          matchesUpserted: 0,
-          standingsUpserted,
-        }),
-        { status: 200, headers },
-      );
-    }
-
-    // Reset request counter for this cycle
-    resetRequestCount();
-
-    // Auto-regulation: low budget disables fast_mode
-    const remainingBudget = budget.api_budget - budget.api_requests_today;
-    if (remainingBudget < 20 && pipelineMeta.fast_mode) {
-      await updatePipelineMeta(null, { fast_mode: false });
-      console.log(`[fetch-data] Budget low (${remainingBudget}), disabling fast_mode`);
-    }
 
     const now = new Date();
     console.log(
@@ -297,7 +247,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
         mode: mode as string,
         error_count: errors.length,
         last_error: errors.length > 0 ? errors[errors.length - 1] : null,
-        api_requests_today: budget.api_requests_today + getRequestCount(),
       });
     } catch (metaErr: any) {
       console.warn("[fetch-data] pipeline_meta update error:", metaErr.message);

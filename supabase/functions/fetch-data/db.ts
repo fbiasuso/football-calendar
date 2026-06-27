@@ -34,7 +34,9 @@ async function buildIdMaps() {
       client.query("SELECT id, api_id FROM teams"),
     ]);
     return {
-      leagues: Object.fromEntries(leagues.rows.map((r: any) => [r.api_id, r.id])),
+      // Map by internal league ID (id) instead of api_id
+      // leagueMap[id] → id (identity — matches are now returned with internal IDs)
+      leagues: Object.fromEntries(leagues.rows.map((r: any) => [r.id, r.id])),
       teams: Object.fromEntries(teams.rows.map((r: any) => [r.api_id, r.id])),
     };
   } finally {

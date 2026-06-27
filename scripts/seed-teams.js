@@ -3,12 +3,12 @@
 // Usage: SUPABASE_DB_PASSWORD=xxx node scripts/seed-teams.js
 
 import pg from 'pg';
-import { API_FOOTBALL_LEAGUE_IDS } from '../src/utils/leagueConfig.js';
+import { LEAGUE_IDS } from '../src/utils/leagueConfig.js';
 
 const { Pool } = pg;
 
 const PASSWORD = process.env.VITE_SUPABASE_DB_PASSWORD || process.env.SUPABASE_DB_PASSWORD;
-const API_KEY = process.env.VITE_API_FOOTBALL_API_KEY;
+const API_KEY = process.env.VITE_FOOTBALL_API_KEY;
 
 const pool = new Pool({
   host: 'db.dzciajbrbkkskvwrxlaw.supabase.co',
@@ -38,7 +38,7 @@ async function fetchTeams(leagueApiId) {
 
 async function main() {
   if (!PASSWORD || !API_KEY) {
-    console.error('❌ Need SUPABASE_DB_PASSWORD and VITE_API_FOOTBALL_API_KEY');
+    console.error('❌ Need SUPABASE_DB_PASSWORD and VITE_FOOTBALL_API_KEY');
     process.exit(1);
   }
 

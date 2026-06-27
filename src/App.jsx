@@ -127,7 +127,7 @@ function App() {
                             ? 'bg-amber-100 text-amber-700'
                             : 'text-gray-400'
                       }`}
-                      title={`API-Football: ${budget.api_budget - budget.api_requests_today} restantes hoy`}
+                      title={`${budget.api_budget - budget.api_requests_today} solicitudes restantes hoy`}
                     >
                       {budget.api_requests_today}/{budget.api_budget}
                     </span>

@@ -4,7 +4,7 @@
 // Requires env: SUPABASE_DB_PASSWORD
 
 import pg from 'pg';
-import { API_FOOTBALL_LEAGUE_IDS, LEAGUE_GROUPS, DEFAULT_SELECTED_LEAGUES } from '../src/utils/leagueConfig.js';
+import { FOOTBALL_DATA_COMPETITION_IDS, LEAGUE_GROUPS, DEFAULT_SELECTED_LEAGUES } from '../src/utils/leagueConfig.js';
 
 const { Pool } = pg;
 
@@ -42,7 +42,7 @@ async function main() {
     }
 
     let order = 0;
-    for (const [name, apiId] of Object.entries(API_FOOTBALL_LEAGUE_IDS)) {
+    for (const [name, apiId] of Object.entries(FOOTBALL_DATA_COMPETITION_IDS)) {
       order++;
       const groupName = leagueToGroup[name] || 'Otros';
       const defaultSel = DEFAULT_SELECTED_LEAGUES.includes(name);
@@ -142,7 +142,7 @@ async function main() {
 
     console.log('\n═══════════════════════════════════════');
     console.log('✅ Seed complete!');
-    console.log(`   • ${Object.keys(API_FOOTBALL_LEAGUE_IDS).length} leagues`);
+    console.log(`   • ${Object.keys(FOOTBALL_DATA_COMPETITION_IDS).length} leagues`);
     console.log(`   • ${nodes.length} bracket nodes`);
     console.log('═══════════════════════════════════════');
 

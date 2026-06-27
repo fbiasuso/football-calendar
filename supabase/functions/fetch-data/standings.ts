@@ -18,8 +18,9 @@ import { type TeamGroupMap, type RawMatch, aggregateStats, statsToStandings } fr
 async function getInternalLeagueId(pool: pg.Pool): Promise<number | null> {
   const client = await pool.connect();
   try {
+    // World Cup internal ID is 1; query by id instead of api_id
     const { rows } = await client.query(
-      "SELECT id FROM leagues WHERE api_id = 1 LIMIT 1",
+      "SELECT id FROM leagues WHERE id = 1 LIMIT 1",
     );
     return rows.length > 0 ? rows[0].id : null;
   } finally {
