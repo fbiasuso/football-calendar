@@ -27,20 +27,28 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
-  // Fast mode: poll force fetch every 30s from the frontend
+  // Fast mode: silent polling every 30s — updates DB + refreshes matches without loading flash
   useEffect(() => {
     if (!HAS_SUPABASE || !fastMode) return;
 
     const poll = async () => {
       try {
+        const { triggerForceFetch } = await import('./api/supabaseAdapter.js');
+        await triggerForceFetch();
+
+        // Silently re-query matches from DB (no loading state, no flash)
+        const { getMatches } = await import('./api/adapter.js');
         const store = useAppStore.getState();
-        await store.forceRefresh();
+        const freshMatches = await getMatches(store.selectedDate);
+        if (freshMatches) {
+          store.setMatches(freshMatches, Date.now());
+        }
       } catch {
         // Silent — polling is non-critical
       }
     };
 
-    poll(); // Initial fetch on toggle ON
+    poll();
     const id = setInterval(poll, 30 * 1000);
     return () => clearInterval(id);
   }, [fastMode]);
