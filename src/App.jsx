@@ -27,6 +27,24 @@ function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Fast mode: poll force fetch every 30s from the frontend
+  useEffect(() => {
+    if (!HAS_SUPABASE || !fastMode) return;
+
+    const poll = async () => {
+      try {
+        const store = useAppStore.getState();
+        await store.forceRefresh();
+      } catch {
+        // Silent — polling is non-critical
+      }
+    };
+
+    poll(); // Initial fetch on toggle ON
+    const id = setInterval(poll, 30 * 1000);
+    return () => clearInterval(id);
+  }, [fastMode]);
+
   const relativeTime = useMemo(() => formatRelativeTime(lastUpdated), [lastUpdated, clockTick]);
 
   const hasMatchInLast5 = useMemo(() => {
