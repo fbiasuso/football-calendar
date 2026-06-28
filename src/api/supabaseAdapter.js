@@ -58,7 +58,7 @@ function normalizeMatch(row) {
         id: row.away_team?.api_id || row.away_team_id,
       },
     },
-    status: row.status || 'pending',
+    status: row.status === 'scheduled' ? 'pending' : (row.status || 'pending'),
     score: {
       home: row.home_score ?? null,
       away: row.away_score ?? null,
@@ -278,8 +278,9 @@ export function subscribeMatches(date, onMatchChange) {
  * @returns {Promise<Object>} Edge Function response
  */
 export async function triggerForceFetch() {
-  const { data, error } = await supabase.functions.invoke('fetch-data?force=true', {
+  const { data, error } = await supabase.functions.invoke('fetch-data', {
     method: 'POST',
+    body: { force: true },
   });
   if (error) throw new Error(`Force fetch failed: ${error.message}`);
   return data;

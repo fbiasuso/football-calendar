@@ -9,7 +9,7 @@ import DateNav from './components/DateNav/DateNav.jsx';
 import SortControl from './components/SortControl/SortControl.jsx';
 import WorldCupPage from './pages/WorldCupPage/WorldCupPage.jsx';
 import { formatRelativeTime } from './utils/dateUtils.js';
-import { getBudget, toggleFastMode } from './api/adapter.js';
+import { toggleFastMode } from './api/adapter.js';
 
 const HAS_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL;
 
@@ -18,7 +18,6 @@ function App() {
   const { error: storeError, autoPollingEnabled, setAutoPolling, currentView, lastUpdated } = useAppStore();
   const fastMode = useAppStore((s) => s.fastMode);
   const setFastMode = useAppStore((s) => s.setFastMode);
-  const [budget, setBudget] = useState(null);
   const [forceFetchLoading, setForceFetchLoading] = useState(false);
   const [clockTick, setClockTick] = useState(0);
 
@@ -26,24 +25,6 @@ function App() {
   useEffect(() => {
     const id = setInterval(() => setClockTick(t => t + 1), 60 * 1000);
     return () => clearInterval(id);
-  }, []);
-
-  // Budget polling (Supabase mode only)
-  useEffect(() => {
-    if (!HAS_SUPABASE) return;
-
-    const loadBudget = async () => {
-      try {
-        const data = await getBudget();
-        setBudget(data);
-      } catch (err) {
-        // Silent — budget is non-critical
-      }
-    };
-
-    loadBudget();
-    const interval = setInterval(loadBudget, 60000); // Refresh every 60s
-    return () => clearInterval(interval);
   }, []);
 
   const relativeTime = useMemo(() => formatRelativeTime(lastUpdated), [lastUpdated, clockTick]);
@@ -117,21 +98,6 @@ function App() {
                     </svg>
                   </button>
 
-                  {/* Budget indicator (Supabase) */}
-                  {budget && (
-                    <span
-                      className={`text-[11px] font-mono px-1.5 py-1 rounded ${
-                        budget.api_requests_today >= 80
-                          ? 'bg-red-100 text-red-700'
-                          : budget.api_requests_today >= 50
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'text-gray-400'
-                      }`}
-                      title={`${budget.api_budget - budget.api_requests_today} solicitudes restantes hoy`}
-                    >
-                      {budget.api_requests_today}/{budget.api_budget}
-                    </span>
-                  )}
                 </>
               ) : (
                 <>

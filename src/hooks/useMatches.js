@@ -7,7 +7,7 @@ import { getDateKey } from '../utils/dateUtils.js';
 const useSupabase = !!import.meta.env.VITE_SUPABASE_URL;
 
 const CACHE_PREFIX = 'fc_matches_';
-const CACHE_EXPIRY = 60 * 60 * 1000; // 60 minutes (API-Football has 100 req/day limit)
+const CACHE_EXPIRY = 60 * 60 * 1000; // 60 minutes cache for finished/pending matches
 
 /**
  * Get cache key for a date
