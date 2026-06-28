@@ -147,7 +147,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           shouldFetch: true,
           reasons: ["force: manual refresh"],
           nextPlanned: new Date(now.getTime() + 5 * 60 * 1000),
-          endpoints: pipelineMeta.fast_mode === true ? ["live"] : ["fixtures", "live", "standings"],
+          endpoints: pipelineMeta.fast_mode === true ? ["fixtures", "live"] : ["fixtures", "live", "standings"],
         } as ScheduleDecision
       : getSchedule({
           now,
