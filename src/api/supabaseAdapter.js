@@ -285,7 +285,6 @@ export async function triggerForceFetch() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'apikey': anonKey,
       'Authorization': `Bearer ${anonKey}`,
     },
     body: JSON.stringify({ force: true }),
