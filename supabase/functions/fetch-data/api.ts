@@ -4,16 +4,28 @@
 
 const API_BASE_URL = "https://api.football-data.org/v4";
 
-// ── Request Counter (no-op — football-data.org uses rate limiting, not daily budget) ─
+// ── Request Counter & Rate Limit Tracking ──────────────────────────────────
 
 let _requestCount = 0;
+let _remainingThisMinute = 10; // optimistic initial value
+let _rateLimitResetSeconds = 60;
 
 export function getRequestCount(): number {
   return _requestCount;
 }
 
+export function getRemainingThisMinute(): number {
+  return _remainingThisMinute;
+}
+
+export function getRateLimitResetSeconds(): number {
+  return _rateLimitResetSeconds;
+}
+
 export function resetRequestCount(): void {
   _requestCount = 0;
+  _remainingThisMinute = 10;
+  _rateLimitResetSeconds = 60;
 }
 
 // ── Internal League ID Mapper ───────────────────────────────────────────────
@@ -131,10 +143,20 @@ export async function fetchWithRetry(
       },
     });
 
+    // Track rate limit from response headers
+    const remaining = response.headers.get("X-Requests-Available-Minute");
+    const resetSec = response.headers.get("X-RequestCounter-Reset");
+    if (remaining !== null) _remainingThisMinute = Math.min(_remainingThisMinute, parseInt(remaining, 10));
+    if (resetSec !== null) _rateLimitResetSeconds = parseInt(resetSec, 10);
+    _requestCount++;
+
     if (!response.ok) {
       if (response.status === 429 && retries < 3) {
+        // Wait for rate limit reset + 1s buffer
+        const waitMs = (_rateLimitResetSeconds + 1) * 1000;
+        console.warn(`[api] 429 rate limited on ${endpoint}, waiting ${waitMs}ms (retry ${retries + 1}/3)`);
         await new Promise((resolve) =>
-          setTimeout(resolve, 1000 * (retries + 1))
+          setTimeout(resolve, Math.min(waitMs, 1000 * (retries + 1)))
         );
         return fetchWithRetry(endpoint, retries + 1);
       }

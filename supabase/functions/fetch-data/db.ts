@@ -204,6 +204,8 @@ export async function updatePipelineMeta(
     api_requests_today?: number;
     api_reset_date?: string;
     fast_mode?: boolean;
+    standings_last_fetched?: string;
+    fixture_fetch_cache?: Record<string, string>;
   },
 ): Promise<void> {
   const client = await POOL.connect();
@@ -221,6 +223,8 @@ export async function updatePipelineMeta(
     if (data.api_requests_today !== undefined) { sets.push(`api_requests_today = $${i++}`); vals.push(data.api_requests_today); }
     if (data.api_reset_date !== undefined) { sets.push(`api_reset_date = $${i++}`); vals.push(data.api_reset_date); }
     if (data.fast_mode !== undefined) { sets.push(`fast_mode = $${i++}`); vals.push(data.fast_mode); }
+    if (data.standings_last_fetched !== undefined) { sets.push(`standings_last_fetched = $${i++}`); vals.push(data.standings_last_fetched); }
+    if (data.fixture_fetch_cache !== undefined) { sets.push(`fixture_fetch_cache = $${i++}`); vals.push(JSON.stringify(data.fixture_fetch_cache)); }
 
     await client.query(
       `UPDATE pipeline_meta SET ${sets.join(", ")} WHERE id = 1`,

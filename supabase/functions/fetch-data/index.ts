@@ -11,7 +11,10 @@ const { Pool } = pg;
 const POOL = new Pool({ connectionString: Deno.env.get("SUPABASE_DB_URL"), max: 1 });
 
 import { getSchedule, isWorldCupPeriod, type ScheduleDecision } from "./schedule.ts";
-import { getMatches, getLiveMatches, getStandings } from "./api.ts";
+import {
+  getMatches, getLiveMatches, getStandings,
+  getRemainingThisMinute, getRateLimitResetSeconds,
+} from "./api.ts";
 import { upsertMatches, upsertStandings, updatePipelineMeta } from "./db.ts";
 
 export interface FetchDataResponse {
@@ -19,6 +22,7 @@ export interface FetchDataResponse {
   reason: string;
   matchesUpserted: number;
   standingsUpserted: boolean;
+  requestsRemainingMinute?: number;
   errors?: string[];
 }
 
@@ -140,7 +144,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           shouldFetch: true,
           reasons: ["force: manual refresh"],
           nextPlanned: new Date(now.getTime() + 5 * 60 * 1000),
-          endpoints: ["fixtures", "live"],
+          endpoints: ["fixtures", "live", "standings"],
         } as ScheduleDecision
       : getSchedule({
           now,
@@ -154,6 +158,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
             : null,
           fastMode: pipelineMeta.fast_mode === true,
         });
+
+    // Augment schedule: standings are always fetched alongside fixtures (unless fast mode)
+    if (!pipelineMeta.fast_mode && schedule.endpoints.includes("fixtures") && !schedule.endpoints.includes("standings")) {
+      (schedule as any).endpoints.push("standings");
+    }
 
     if (!schedule.shouldFetch) {
       console.log(`[fetch-data] SKIP: ${schedule.reasons.join(", ")}`);
@@ -196,25 +205,57 @@ Deno.serve(async (req: Request): Promise<Response> => {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = fmt(yesterday);
 
+    // ── Fixture date cache from pipeline_meta ──────────────────────────────
+    const fixtureCache: Record<string, string> = pipelineMeta.fixture_fetch_cache
+      ? (typeof pipelineMeta.fixture_fetch_cache === "object" ? pipelineMeta.fixture_fetch_cache : {})
+      : {};
+    const CACHE_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour for yesterday/tomorrow
+
+    function isDateFresh(dateStr: string): boolean {
+      const cached = fixtureCache[dateStr];
+      if (!cached) return false;
+      return now.getTime() - new Date(cached).getTime() < CACHE_MAX_AGE_MS;
+    }
+
     // ── Execute fetch cycle ────────────────────────────────────────────────
     let matchesUpserted = 0;
     let standingsUpserted = false;
     const errors: string[] = [];
+    const updatedFixtureCache = { ...fixtureCache };
 
     try {
-      // Fetch fixtures for yesterday, today, and tomorrow
+      // Fetch fixtures — skip yesterday/tomorrow if cached within 1h
       if (schedule.endpoints.includes("fixtures")) {
-        const [yesterdayMatches, todayMatches, tomorrowMatches] =
-          await Promise.all([
-            getMatches(yesterdayStr),
-            getMatches(todayStr),
-            getMatches(tomorrowStr),
-          ]);
+        const datePromises: Promise<any>[] = [];
+
+        // Today: always fetch
+        datePromises.push(getMatches(todayStr));
+        updatedFixtureCache[todayStr] = now.toISOString();
+
+        // Yesterday: skip if fresh
+        if (isDateFresh(yesterdayStr)) {
+          console.log(`[fetch-data] Skipping ${yesterdayStr} (cached < 1h)`);
+          datePromises.push(Promise.resolve([]));
+        } else {
+          datePromises.push(getMatches(yesterdayStr));
+          updatedFixtureCache[yesterdayStr] = now.toISOString();
+        }
+
+        // Tomorrow: skip if fresh
+        if (isDateFresh(tomorrowStr)) {
+          console.log(`[fetch-data] Skipping ${tomorrowStr} (cached < 1h)`);
+          datePromises.push(Promise.resolve([]));
+        } else {
+          datePromises.push(getMatches(tomorrowStr));
+          updatedFixtureCache[tomorrowStr] = now.toISOString();
+        }
+
+        const [todayMatches, yesterdayMatches, tomorrowMatches] = await Promise.all(datePromises);
 
         const allMatches = [
-          ...yesterdayMatches,
+          ...(Array.isArray(yesterdayMatches) ? yesterdayMatches : yesterdayMatches?.matches || []),
           ...todayMatches,
-          ...tomorrowMatches,
+          ...(Array.isArray(tomorrowMatches) ? tomorrowMatches : tomorrowMatches?.matches || []),
         ];
 
         if (allMatches.length > 0) {
@@ -237,29 +278,54 @@ Deno.serve(async (req: Request): Promise<Response> => {
       errors.push(fetchError.message);
     }
 
-    // Fetch official standings from football-data.org API
-    try {
-      // Clear stale rows first (avoids duplicates when group_name format changes)
-      await query(`DELETE FROM standings WHERE league_id = 1 AND season = 2026`);
-      const standings = await getStandings(1, 2026);
-      if (standings.length > 0) {
-        const count = await upsertStandings(null, 1, 2026, standings, false);
-        standingsUpserted = count > 0;
-        console.log(`[fetch-data] Upserted ${count} official standings rows`);
+    // Fetch official standings — only if "standings" in endpoints AND stale > 30 min
+    if (schedule.endpoints.includes("standings")) {
+      try {
+        const standingsLastFetched = pipelineMeta.standings_last_fetched
+          ? new Date(pipelineMeta.standings_last_fetched).getTime()
+          : 0;
+        const minutesSinceStandings = (now.getTime() - standingsLastFetched) / 60000;
+
+        if (standingsLastFetched === 0 || minutesSinceStandings >= 30) {
+          // Clear stale rows first (avoids duplicates when group_name format changes)
+          await query(`DELETE FROM standings WHERE league_id = 1 AND season = 2026`);
+          const standings = await getStandings(1, 2026);
+          if (standings.length > 0) {
+            const count = await upsertStandings(null, 1, 2026, standings, false);
+            standingsUpserted = count > 0;
+            console.log(`[fetch-data] Upserted ${count} official standings rows`);
+          }
+        } else {
+          console.log(`[fetch-data] Standings skipped (${Math.round(minutesSinceStandings)} min since last fetch, need 30)`);
+        }
+      } catch (standingsErr: any) {
+        console.error("[fetch-data] Standings fetch error:", standingsErr.message);
+        errors.push(`standings: ${standingsErr.message}`);
       }
-    } catch (standingsErr: any) {
-      console.error("[fetch-data] Standings fetch error:", standingsErr.message);
-      errors.push(`standings: ${standingsErr.message}`);
+    } else {
+      console.log(`[fetch-data] Standings skipped (not in endpoints)`);
+    }
+
+    // ── Rate-limit aware nextPlanned adjustment ────────────────────────────
+    const remaining = getRemainingThisMinute();
+    let adjustedNextPlanned = schedule.nextPlanned;
+    if (remaining <= 2) {
+      // Close to rate limit — extend interval to let the counter reset
+      const extended = new Date(schedule.nextPlanned.getTime() + 60 * 1000);
+      adjustedNextPlanned = extended;
+      console.log(`[fetch-data] Rate limit close (${remaining} left), extending next fetch by 60s`);
     }
 
     // ── Update pipeline_meta ────────────────────────────────────────────────
     try {
       await updatePipelineMeta(null, {
         last_fetched: now.toISOString(),
-        next_planned: schedule.nextPlanned.toISOString(),
+        next_planned: adjustedNextPlanned.toISOString(),
         mode: mode as string,
         error_count: errors.length,
         last_error: errors.length > 0 ? errors[errors.length - 1] : null,
+        standings_last_fetched: standingsUpserted ? now.toISOString() : undefined,
+        fixture_fetch_cache: updatedFixtureCache,
       });
     } catch (metaErr: any) {
       console.warn("[fetch-data] pipeline_meta update error:", metaErr.message);
@@ -271,6 +337,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       reason: schedule.reasons.join("; "),
       matchesUpserted,
       standingsUpserted,
+      requestsRemainingMinute: remaining,
       errors: errors.length > 0 ? errors : undefined,
     };
 

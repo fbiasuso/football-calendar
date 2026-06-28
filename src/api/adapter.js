@@ -255,13 +255,14 @@ export async function toggleFastMode(enabled) {
  * @returns {Promise<string[]>}
  */
 export async function getRounds(leagueId, season) {
+  // Supabase mode: rounds are not in use (World Cup bracket is hardcoded)
+  if (useSupabase) return [];
+
   const isStatic = await ensureModeDetected();
 
   if (isStatic) {
     const data = await tryFetchStatic('schedule.json');
     if (data) {
-      // If schedule exists, return rounds if available, or empty array otherwise
-      // (avoid API fallback — it will 404 in production)
       return data.rounds || [];
     }
   }
