@@ -147,7 +147,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
           shouldFetch: true,
           reasons: ["force: manual refresh"],
           nextPlanned: new Date(now.getTime() + 5 * 60 * 1000),
-          endpoints: pipelineMeta.fast_mode === true ? ["fixtures", "live"] : ["fixtures", "live", "standings"],
+          // Force mode always fetches everything, regardless of fast_mode
+          endpoints: ["fixtures", "live", "standings"],
         } as ScheduleDecision
       : getSchedule({
           now,
@@ -285,6 +286,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // Fetch official standings — only if "standings" in endpoints AND stale > 30 min
+    // (force mode bypasses the 30-min cache)
     if (schedule.endpoints.includes("standings")) {
       try {
         const standingsLastFetched = pipelineMeta.standings_last_fetched
@@ -292,7 +294,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           : 0;
         const minutesSinceStandings = (now.getTime() - standingsLastFetched) / 60000;
 
-        if (standingsLastFetched === 0 || minutesSinceStandings >= 30) {
+        if (force || standingsLastFetched === 0 || minutesSinceStandings >= 30) {
           // Clear stale rows first (avoids duplicates when group_name format changes)
           await query(`DELETE FROM standings WHERE league_id = 1 AND season = 2026`);
           const standings = await getStandings(1, 2026);
