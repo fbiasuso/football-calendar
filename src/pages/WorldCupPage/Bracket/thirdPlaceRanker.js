@@ -2,7 +2,9 @@
 //
 // FIFA 2026 World Cup: 12 groups (A-L), top 2 from each group advance (24 teams)
 // plus top 8 third-placed teams. This function ranks third-placed teams and
-// assigns them to R32 slots using the official FIFA candidate-group sets.
+// assigns them to R32 slots using the official FIFA Annex C lookup table.
+
+import { findAnnexC } from './annexCData.js';
 
 /**
  * Fixed R32 matchups (no third-place assignment needed)
@@ -47,21 +49,8 @@ function sortThirdPlace(a, b) {
 }
 
 /**
- * Check if assigning a team to a slot would cause a self-match
- * (team faces the winner of its own group).
- * @param {Object} team - Third-place team
- * @param {Object} slot - Slot configuration
- * @returns {boolean}
- */
-function wouldSelfMatch(team, slot) {
-  // Extract the opponent's group letter from opponentGroup (e.g. "1°E" -> "E")
-  const opponentGroup = slot.opponentGroup.replace(/^\d+[°]/, '');
-  return team.group === opponentGroup;
-}
-
-/**
  * Pure function: extract third-placed teams from standings, rank them,
- * select top 8, and assign to R32 slots using FIFA greedy algorithm.
+ * select top 8, and assign to R32 slots using FIFA Annex C lookup.
  *
  * @param {Array<{group: string, teams: Array}>} standings
  *   Array of group objects. Each team entry must have:
@@ -91,69 +80,34 @@ export default function thirdPlaceRanker(standings) {
 
   // Step 3: Take top 8
   const advancing = ranked.slice(0, 8);
-  const advancingSet = new Set(advancing.map((t) => t.group));
 
-  // Step 4: Build eligibility matrix (slot → teams)
-  // Each slot can accept teams from its candidate groups that are in advancing
-  const eligibility = THIRD_PLACE_SLOTS.map((slot) => ({
-    slotIndex: THIRD_PLACE_SLOTS.indexOf(slot),
-    matchupId: slot.matchupId,
-    opponentGroup: slot.opponentGroup,
-    candidateGroups: slot.candidateGroups,
-    eligibleTeams: advancing.filter(
-      (t) =>
-        slot.candidateGroups.includes(t.group) && !wouldSelfMatch(t, slot)
-    ),
-  }));
+  // Step 4: Use FIFA Annex C lookup for assignment
+  // Annex C maps each group winner (1A, 1B, etc.) to the third-place group
+  // that should face them in R32 — for all 495 C(12,8) combinations.
+  const advancingGroups = advancing.map((t) => t.group);
+  const annexCAssignment = findAnnexC(advancingGroups);
 
-  // Step 5: Maximum bipartite matching using DFS (Kuhn algorithm)
-  // We match advancing teams (left side) to slots (right side)
-  // But we want to prioritize best-ranked teams getting assigned.
-  // Strategy: process advancing teams in rank order and find augmenting paths.
+  // Annex C label → matchupId
+  const LABEL_TO_MATCHUP = {
+    '1A': 'M79', '1B': 'M85', '1D': 'M81', '1E': 'M74',
+    '1G': 'M82', '1I': 'M77', '1K': 'M87', '1L': 'M80',
+  };
 
-  const slotMatch = new Array(THIRD_PLACE_SLOTS.length).fill(null); // slot → team group
-  const teamMatch = {}; // team group → slot index
-
-  /**
-   * DFS to find augmenting path for a team
-   * @param {Object} team - Team to find a slot for
-   * @param {Set} visited - Visited slot indices in this DFS
-   * @returns {boolean} - Whether a slot was found
-   */
-  function dfs(team, visited) {
-    for (const slot of eligibility) {
-      if (visited.has(slot.slotIndex)) continue;
-
-      const isEligible = slot.eligibleTeams.some((t) => t.group === team.group);
-      if (!isEligible) continue;
-
-      visited.add(slot.slotIndex);
-
-      // If slot is free, or we can reassign its current team
-      if (
-        slotMatch[slot.slotIndex] === null ||
-        dfs(
-          advancing.find((t) => t.group === slotMatch[slot.slotIndex]),
-          visited
-        )
-      ) {
-        slotMatch[slot.slotIndex] = team.group;
-        teamMatch[team.group] = slot.slotIndex;
-        return true;
+  // Build assignment: matchupId → team object
+  const assignment = {};
+  if (annexCAssignment) {
+    for (const [label, groupLetter] of Object.entries(annexCAssignment)) {
+      const matchupId = LABEL_TO_MATCHUP[label];
+      const team = advancing.find((t) => t.group === groupLetter);
+      if (matchupId && team) {
+        assignment[matchupId] = team;
       }
     }
-    return false;
   }
 
-  // Process teams in rank order (best first gets priority)
-  for (const team of advancing) {
-    dfs(team, new Set());
-  }
-
-  // Step 6: Build slot results from matching
+  // Step 5: Build slot results from Annex C assignment
   const slots = THIRD_PLACE_SLOTS.map((slot, index) => {
-    const assignedGroup = slotMatch[index];
-    const assignedTeam = advancing.find((t) => t.group === assignedGroup) || null;
+    const assignedTeam = assignment[slot.matchupId] || null;
 
     return {
       slotIndex: index,
