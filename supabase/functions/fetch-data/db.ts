@@ -182,21 +182,22 @@ export async function upsertStandings(
       return count;
     }
 
-    // ── When teamIds are API IDs, convert via teamMap ────────────────────────
-    const seen = new Set<number>();
+    // ── When teamIds are API IDs, ensure teams exist and names are up-to-date ──
+    // Always upsert every team from standings — ON CONFLICT updates existing
+    // teams' name/logo from the API response. This prevents stale names from
+    // previous providers (e.g. API-Football ID 770 = Czechia, but
+    // football-data.org ID 770 = England).
     for (const group of standings) {
       if (!group.teams) continue;
       for (const t of group.teams) {
-        if (t.teamId && !teamMap[t.teamId] && !seen.has(t.teamId)) {
-          const { rows } = await client.query(
-            `INSERT INTO teams (api_id, name, logo) VALUES ($1,$2,$3)
-             ON CONFLICT (api_id) DO UPDATE SET name=EXCLUDED.name, logo=EXCLUDED.logo
-             RETURNING id`,
-            [t.teamId, t.name, t.logo],
-          );
-          teamMap[t.teamId] = rows[0].id;
-          seen.add(t.teamId);
-        }
+        if (!t.teamId) continue;
+        const { rows } = await client.query(
+          `INSERT INTO teams (api_id, name, logo) VALUES ($1,$2,$3)
+           ON CONFLICT (api_id) DO UPDATE SET name=EXCLUDED.name, logo=EXCLUDED.logo
+           RETURNING id`,
+          [t.teamId, t.name, t.logo],
+        );
+        teamMap[t.teamId] = rows[0].id;
       }
     }
 
