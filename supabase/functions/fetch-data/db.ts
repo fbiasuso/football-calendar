@@ -33,12 +33,30 @@ interface DbMatch {
 export async function ensureColumns(): Promise<void> {
   const client = await POOL.connect();
   try {
+    // Ensure cache columns exist
     await client.query(`
       ALTER TABLE pipeline_meta
         ADD COLUMN IF NOT EXISTS standings_last_fetched timestamptz,
         ADD COLUMN IF NOT EXISTS fixture_fetch_cache jsonb NOT NULL DEFAULT '{}'::jsonb
     `);
-    console.log("[db] Ensured cache columns on pipeline_meta");
+
+    // Ensure table permissions + RLS policies for anon key
+    await client.query(`GRANT USAGE ON SCHEMA public TO anon, authenticated`);
+    await client.query(`GRANT SELECT, UPDATE ON pipeline_meta TO anon, authenticated`);
+
+    // Create RLS policies idempotently (ignore if already exist)
+    for (const sql of [
+      `CREATE POLICY "anon_read_pipeline_meta" ON pipeline_meta FOR SELECT USING (true)`,
+      `CREATE POLICY "anon_toggle_fast_mode" ON pipeline_meta FOR UPDATE USING (id = 1) WITH CHECK (id = 1 AND fast_mode IS NOT NULL)`,
+    ]) {
+      try {
+        await client.query(sql);
+      } catch (_err: any) {
+        // Policy likely already exists — ignore
+      }
+    }
+
+    console.log("[db] Ensured cache columns + RLS policies on pipeline_meta");
   } finally {
     client.release();
   }
