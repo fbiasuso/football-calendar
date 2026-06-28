@@ -15,7 +15,10 @@ import {
   getMatches, getLiveMatches, getStandings,
   getRemainingThisMinute, getRateLimitResetSeconds,
 } from "./api.ts";
-import { upsertMatches, upsertStandings, updatePipelineMeta } from "./db.ts";
+import { upsertMatches, upsertStandings, updatePipelineMeta, ensureColumns } from "./db.ts";
+
+// Auto-migrate: ensure cache columns exist on cold start
+ensureColumns().catch((err) => console.warn("[fetch-data] ensureColumns failed:", err.message));
 
 export interface FetchDataResponse {
   fetched: boolean;

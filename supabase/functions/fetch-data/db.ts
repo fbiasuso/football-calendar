@@ -24,6 +24,26 @@ interface DbMatch {
   is_knockout: boolean;
 }
 
+// ── Auto-migration ──────────────────────────────────────────────────────────
+
+/**
+ * Ensure required cache columns exist on pipeline_meta.
+ * Runs on cold start — safe to call repeatedly (IF NOT EXISTS).
+ */
+export async function ensureColumns(): Promise<void> {
+  const client = await POOL.connect();
+  try {
+    await client.query(`
+      ALTER TABLE pipeline_meta
+        ADD COLUMN IF NOT EXISTS standings_last_fetched timestamptz,
+        ADD COLUMN IF NOT EXISTS fixture_fetch_cache jsonb NOT NULL DEFAULT '{}'::jsonb
+    `);
+    console.log("[db] Ensured cache columns on pipeline_meta");
+  } finally {
+    client.release();
+  }
+}
+
 // ── Helpers ──
 
 async function buildIdMaps() {
