@@ -237,8 +237,10 @@ export function subscribeMatches(date, onMatchChange) {
   const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
   const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate() + 1);
 
+  // Unique channel name to avoid "cannot add callbacks after subscribe" errors
+  const channelName = `matches-realtime-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const channel = supabase
-    .channel('matches-realtime')
+    .channel(channelName)
     .on('postgres_changes',
       {
         event: '*',
@@ -266,7 +268,7 @@ export function subscribeMatches(date, onMatchChange) {
     .subscribe();
 
   return () => {
-    channel.unsubscribe();
+    supabase.removeChannel(channel);
   };
 }
 
