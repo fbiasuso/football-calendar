@@ -189,10 +189,10 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {currentView === 'matches' && (
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Sidebar - League filters */}
+            {/* Sidebar - League filters (desktop sidebar, mobile bar) */}
             <aside className="lg:w-64 flex-shrink-0">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-24">
-                <h2 className="font-semibold text-gray-800 mb-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:sticky lg:top-24">
+                <h2 className="font-semibold text-gray-800 mb-4 hidden lg:block">
                   Filtrar ligas
                 </h2>
                 <LeagueFilter />
@@ -200,7 +200,7 @@ function App() {
             </aside>
             
             {/* Main content area */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {/* Date navigation and sort control */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <DateNav />
