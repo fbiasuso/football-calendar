@@ -209,12 +209,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const yesterdayStr = fmt(yesterday);
 
     // ── Fixture date cache from pipeline_meta ──────────────────────────────
+    // Force mode bypasses cache (user explicitly requested refresh)
+    const useFixtureCache = !force;
     const fixtureCache: Record<string, string> = pipelineMeta.fixture_fetch_cache
       ? (typeof pipelineMeta.fixture_fetch_cache === "object" ? pipelineMeta.fixture_fetch_cache : {})
       : {};
     const CACHE_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour for yesterday/tomorrow
 
     function isDateFresh(dateStr: string): boolean {
+      if (!useFixtureCache) return false;
       const cached = fixtureCache[dateStr];
       if (!cached) return false;
       return now.getTime() - new Date(cached).getTime() < CACHE_MAX_AGE_MS;
@@ -235,7 +238,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         datePromises.push(getMatches(todayStr));
         updatedFixtureCache[todayStr] = now.toISOString();
 
-        // Yesterday: skip if fresh
+        // Yesterday: skip if fresh (only when NOT force)
         if (isDateFresh(yesterdayStr)) {
           console.log(`[fetch-data] Skipping ${yesterdayStr} (cached < 1h)`);
           datePromises.push(Promise.resolve([]));
@@ -244,7 +247,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           updatedFixtureCache[yesterdayStr] = now.toISOString();
         }
 
-        // Tomorrow: skip if fresh
+        // Tomorrow: skip if fresh (only when NOT force)
         if (isDateFresh(tomorrowStr)) {
           console.log(`[fetch-data] Skipping ${tomorrowStr} (cached < 1h)`);
           datePromises.push(Promise.resolve([]));
