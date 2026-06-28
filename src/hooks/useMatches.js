@@ -166,9 +166,14 @@ export function useMatches() {
 
         let newMatches;
         if (idx >= 0) {
-          // Replace existing match
+          // Merge only fields Realtime can provide reliably (no team/league joins)
           newMatches = [...currentMatches];
-          newMatches[idx] = { ...newMatches[idx], ...updatedMatch };
+          newMatches[idx] = {
+            ...newMatches[idx],
+            status: updatedMatch.status,
+            score: updatedMatch.score,
+            minute: updatedMatch.minute,
+          };
         } else if (updatedMatch.status !== 'finished' && updatedMatch.date >= new Date(selectedDate).getTime()) {
           // New match appeared in our date range (only if not finished)
           newMatches = [...currentMatches, updatedMatch];
