@@ -239,6 +239,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // Fetch official standings from football-data.org API
     try {
+      // Clear stale rows first (avoids duplicates when group_name format changes)
+      await query(`DELETE FROM standings WHERE league_id = 1 AND season = 2026`);
       const standings = await getStandings(1, 2026);
       if (standings.length > 0) {
         const count = await upsertStandings(null, 1, 2026, standings, false);
