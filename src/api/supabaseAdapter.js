@@ -278,12 +278,25 @@ export function subscribeMatches(date, onMatchChange) {
  * @returns {Promise<Object>} Edge Function response
  */
 export async function triggerForceFetch() {
-  const { data, error } = await supabase.functions.invoke('fetch-data', {
+  const funcUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-data`;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  const res = await fetch(funcUrl, {
     method: 'POST',
-    body: { force: true },
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': anonKey,
+      'Authorization': `Bearer ${anonKey}`,
+    },
+    body: JSON.stringify({ force: true }),
   });
-  if (error) throw new Error(`Force fetch failed: ${error.message}`);
-  return data;
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Force fetch failed (${res.status}): ${text}`);
+  }
+
+  return res.json();
 }
 
 /**
