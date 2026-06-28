@@ -231,7 +231,7 @@ export async function getStandings(leagueId, season) {
   return standings
     .filter(s => s.type === 'TOTAL')
     .map(s => ({
-      group: (s.group || '').replace('GROUP_', ''),
+      group: (s.group || '').replace('GROUP_', '').replace('Group ', ''),
       teams: (s.table || []).map(entry => ({
         rank: entry.position,
         name: entry.team?.name || 'N/A',

@@ -253,10 +253,12 @@ export function normalizeStandings(data: any): StandingsGroup[] {
   if (!Array.isArray(standings)) return [];
 
   return standings.map((groupStandings: any) => {
-    // Extract group letter from "GROUP_A" → "A", or use the group as-is
+    // Extract group letter from "GROUP_A" → "A" or "Group A" → "A"
     let group = groupStandings.group || "";
     if (group.startsWith("GROUP_")) {
       group = group.replace("GROUP_", "");
+    } else if (group.startsWith("Group ")) {
+      group = group.replace("Group ", "");
     }
 
     const table = Array.isArray(groupStandings.table) ? groupStandings.table : [];
